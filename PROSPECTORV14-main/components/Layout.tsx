@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MainMode, SubModule } from '../types';
 
@@ -28,25 +27,25 @@ const STRATEGIC_CITIES = [
   { rank: 8, city: "SAN FRANCISCO, USA" },
   { rank: 9, city: "TORONTO, CAN" },
   { rank: 10, city: "LOS ANGELES, USA" },
-  { rank: 11, city: "ZURICH, SWI" },
-  { rank: 12, city: "MELBOURNE, AUS" },
-  { rank: 13, city: "DUBLIN, IRE" },
-  { rank: 14, city: "CHICAGO, USA" },
-  { rank: 15, city: "DALLAS, USA" },
-  { rank: 16, city: "MANCHESTER, UK" },
-  { rank: 17, city: "SEATTLE, USA" },
-  { rank: 18, city: "VANCOUVER, CAN" },
-  { rank: 19, city: "BRISBANE, AUS" },
-  { rank: 20, city: "HOUSTON, USA" },
-  { rank: 21, city: "BOSTON, USA" },
-  { rank: 22, city: "ATLANTA, USA" },
-  { rank: 23, city: "HONG KONG" },
-  { rank: 24, city: "EDINBURGH, UK" },
-  { rank: 25, city: "DENVER, USA" },
-  { rank: 26, city: "SAN DIEGO, USA" },
-  { rank: 27, city: "TOKYO, JPN" },
-  { rank: 28, city: "BERLIN, GER" },
-  { rank: 29, city: "AMSTERDAM, NL" },
+  { rank: 11, city: "CHICAGO, USA" },
+  { rank: 12, city: "DALLAS, USA" },
+  { rank: 13, city: "HOUSTON, USA" },
+  { rank: 14, city: "LAS VEGAS, USA" },
+  { rank: 15, city: "ATLANTA, USA" },
+  { rank: 16, city: "SEATTLE, USA" },
+  { rank: 17, city: "BOSTON, USA" },
+  { rank: 18, city: "PHOENIX, USA" },
+  { rank: 19, city: "SAN DIEGO, USA" },
+  { rank: 20, city: "DENVER, USA" },
+  { rank: 21, city: "MANCHESTER, UK" },
+  { rank: 22, city: "BIRMINGHAM, UK" },
+  { rank: 23, city: "MELBOURNE, AUS" },
+  { rank: 24, city: "BRISBANE, AUS" },
+  { rank: 25, city: "VANCOUVER, CAN" },
+  { rank: 26, city: "CALGARY, CAN" },
+  { rank: 27, city: "DUBLIN, IRE" },
+  { rank: 28, city: "HONG KONG" },
+  { rank: 29, city: "TOKYO, JPN" },
   { rank: 30, city: "PARIS, FRA" }
 ];
 
@@ -57,7 +56,7 @@ const IconWrapper = ({ path, className = "w-5 h-5" }: { path: React.ReactNode, c
 );
 
 const Icons = {
-  Operate: <IconWrapper path={<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />} />,
+  Operate: <IconWrapper path={<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 v2M7 7h10" />} />,
   Create: <IconWrapper path={<path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l5 5" />} />,
   Studio: <IconWrapper path={<><path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></>} />,
   Sell: <IconWrapper path={<path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />} />,

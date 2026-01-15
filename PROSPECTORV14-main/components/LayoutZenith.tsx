@@ -25,7 +25,27 @@ const STRATEGIC_CITIES = [
   { rank: 7, city: "SYDNEY, AUS" },
   { rank: 8, city: "SAN FRANCISCO, USA" },
   { rank: 9, city: "TORONTO, CAN" },
-  { rank: 10, city: "LOS ANGELES, USA" }
+  { rank: 10, city: "LOS ANGELES, USA" },
+  { rank: 11, city: "CHICAGO, USA" },
+  { rank: 12, city: "DALLAS, USA" },
+  { rank: 13, city: "HOUSTON, USA" },
+  { rank: 14, city: "LAS VEGAS, USA" },
+  { rank: 15, city: "ATLANTA, USA" },
+  { rank: 16, city: "SEATTLE, USA" },
+  { rank: 17, city: "BOSTON, USA" },
+  { rank: 18, city: "PHOENIX, USA" },
+  { rank: 19, city: "SAN DIEGO, USA" },
+  { rank: 20, city: "DENVER, USA" },
+  { rank: 21, city: "MANCHESTER, UK" },
+  { rank: 22, city: "BIRMINGHAM, UK" },
+  { rank: 23, city: "MELBOURNE, AUS" },
+  { rank: 24, city: "BRISBANE, AUS" },
+  { rank: 25, city: "VANCOUVER, CAN" },
+  { rank: 26, city: "CALGARY, CAN" },
+  { rank: 27, city: "DUBLIN, IRE" },
+  { rank: 28, city: "HONG KONG" },
+  { rank: 29, city: "TOKYO, JPN" },
+  { rank: 30, city: "PARIS, FRA" }
 ];
 
 const ModeIcon = ({ id, active }: { id: MainMode, active: boolean }) => {
@@ -100,12 +120,12 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
       { id: 'EXECUTIVE_DASHBOARD', label: 'Executive Dashboard', desc: 'Main operational overview' },
       { id: 'TRANSFORMATION_BLUEPRINT', label: 'System Overview', desc: 'Full-scale marketing blueprint' },
       { id: 'USER_GUIDE', label: 'System Manual', desc: 'Exhaustive feature directory' },
-      { id: 'MARKET_DISCOVERY', label: 'Market Discovery', desc: 'Locate high-value prospects' },
+      { id: 'MARKET_DISCOVERY', label: 'Generate Leads', desc: 'Locate high-value prospects' },
       { id: 'AUTOMATED_SEARCH', label: 'Intelligence Scan', desc: 'Autonomous lead identification' },
       { id: 'MARKET_TRENDS', label: 'Market Trends', desc: 'Real-time industry insights' },
     ],
     "CRM & STRATEGY": [
-      { id: 'PROSPECT_DATABASE', label: 'Client Ledger', desc: 'Master contact database' },
+      { id: 'PROSPECT_DATABASE', label: 'Lead Database', desc: 'Master contact database' },
       { id: 'STRATEGY_CENTER', label: 'Strategy Hub', desc: 'Deep-dive business audits' },
       { id: 'PIPELINE', label: 'Growth Pipeline', desc: 'Opportunity lifecycle tracking' },
       { id: 'ANALYTICS_HUB', label: 'Business Analytics', desc: 'Aggregate performance data' },
@@ -163,7 +183,7 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
       { id: 'AGENCY_PLAYBOOK', label: 'Agency Playbook', desc: 'Operational SOPs' },
       { id: 'IDENTITY', label: 'Agency Profile', desc: 'Workspace branding' },
       { id: 'BILLING', label: 'Financials', desc: 'Resource management' },
-      { id: 'AFFILIATE', label: 'Partners', desc: 'Growth network management' },
+      { id: 'AFFILIATE', label: 'Partners', desc: 'Growth network network management' },
     ],
     "SYSTEM": [
       { id: 'SETTINGS', label: 'System Settings', desc: 'Global configuration' },
@@ -186,7 +206,20 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
 }) => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [marketExpanded, setMarketExpanded] = useState(false);
+  const [isCustomMode, setIsCustomMode] = useState(false);
   const marketRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (marketRef.current && !marketRef.current.contains(event.target as Node)) {
+        setMarketExpanded(false);
+        if (!isCustomMode) setIsCustomMode(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCustomMode]);
 
   const groups = MODULE_GROUPS[activeMode];
 
@@ -198,6 +231,16 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
       case 'MEDIA': setActiveModule('VIDEO_PRODUCTION'); break;
       case 'OUTREACH': setActiveModule('CAMPAIGN_ORCHESTRATOR'); break;
       case 'ADMIN': setActiveModule('AGENCY_PLAYBOOK'); break;
+    }
+  };
+
+  const handleRegionSelect = (val: string) => {
+    if (val === 'CUSTOM_OVERRIDE') {
+      setIsCustomMode(true);
+    } else {
+      setTheater(val);
+      setIsCustomMode(false);
+      setMarketExpanded(false);
     }
   };
 
@@ -241,24 +284,75 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</span>
             </button>
 
-            <div ref={marketRef} className={`relative transition-all duration-300 ${marketExpanded ? 'w-64' : 'w-[120px]'}`}>
+            <div ref={marketRef} className="relative">
+                {/* --- CUSTOM SELECT TRIGGER --- */}
                 <div
-                   onClick={() => setMarketExpanded(true)}
-                   className="flex items-center gap-3 px-4 h-12 rounded-full border cursor-pointer bg-[#0b1021] border-slate-800 hover:border-emerald-500/50 overflow-hidden"
+                   onClick={() => !marketExpanded && setMarketExpanded(true)}
+                   className={`flex items-center gap-3 px-6 h-12 rounded-full border-2 cursor-pointer transition-all duration-300 group shadow-lg ${marketExpanded ? 'w-64 border-emerald-500 bg-[#05091a]' : 'w-44 border-slate-800 bg-[#0b1021] hover:border-emerald-500/50'}`}
                 >
-                   {marketExpanded ? (
-                       <select
-                          autoFocus
-                          value={theater}
-                          onChange={(e) => { setTheater(e.target.value); setMarketExpanded(false); }}
-                          className="bg-transparent text-xs font-bold uppercase focus:outline-none w-full text-white"
-                       >
-                          {STRATEGIC_CITIES.map(c => <option key={c.city} value={c.city} className="text-slate-900 bg-white">{c.city}</option>)}
-                       </select>
+                   {marketExpanded && isCustomMode ? (
+                      <div className="flex items-center w-full animate-in fade-in duration-300">
+                         <input
+                            autoFocus
+                            placeholder="LOCATION..."
+                            className="bg-transparent text-[11px] font-black uppercase focus:outline-none w-full text-emerald-400 placeholder-slate-700 tracking-widest"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setMarketExpanded(false);
+                                setIsCustomMode(false);
+                              }
+                              if (e.key === 'Escape') {
+                                setIsCustomMode(false);
+                                setMarketExpanded(false);
+                              }
+                            }}
+                            onChange={(e) => setTheater(e.target.value.toUpperCase())}
+                            value={theater}
+                         />
+                      </div>
                    ) : (
-                       <span className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest leading-none w-full text-center">REGION</span>
+                      <div className="flex items-center justify-between w-full">
+                         <div className="flex flex-col">
+                            <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.3em] leading-none mb-0.5">THEATER</span>
+                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] leading-none truncate max-w-[120px]">
+                              {theater || 'SELECT...'}
+                            </span>
+                         </div>
+                         <svg className={`w-3 h-3 text-emerald-500 transition-transform duration-300 ${marketExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M19 9l-7 7-7-7" /></svg>
+                      </div>
                    )}
                 </div>
+
+                {/* --- CUSTOM DROPDOWN MENU --- */}
+                {marketExpanded && !isCustomMode && (
+                   <div className="absolute top-14 right-0 w-64 bg-[#0b1021]/95 backdrop-blur-2xl border-2 border-slate-800 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[200] animate-in zoom-in-95 fade-in duration-200">
+                      <div className="p-2 border-b border-slate-800 bg-emerald-500/5">
+                         <button 
+                            onClick={() => handleRegionSelect('CUSTOM_OVERRIDE')}
+                            className="w-full text-left px-4 py-3 rounded-xl hover:bg-emerald-600 group transition-all flex items-center justify-between"
+                         >
+                            <span className="text-[10px] font-black text-emerald-400 group-hover:text-white uppercase tracking-widest italic">CUSTOM LOCATION...</span>
+                            <span className="text-xs opacity-40 group-hover:opacity-100">✏️</span>
+                         </button>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                         {STRATEGIC_CITIES.map((c) => (
+                            <button
+                               key={c.city}
+                               onClick={() => handleRegionSelect(c.city)}
+                               className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${theater === c.city ? 'bg-emerald-600 shadow-lg' : 'hover:bg-slate-800'}`}
+                            >
+                               <div className="flex flex-col">
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${theater === c.city ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>{c.city}</span>
+                               </div>
+                               {theater === c.city && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+                               )}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+                )}
             </div>
          </div>
       </header>

@@ -18,7 +18,7 @@ const DashboardIcon = ({ type }: { type: string }) => {
     case 'SENT': return <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
     case 'COST': return <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 010 7h5a3.5 3.5 0 010 7H6" /></svg>;
     case 'BLUEPRINT': return <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>;
-    case 'DISCOVERY': return <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    case 'DISCOVERY': return <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" cy="21" x2="16.65" y2="16.65"/></svg>;
     case 'LEDGER': return <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 4.5z" /></svg>;
     default: return null;
   }
@@ -61,8 +61,8 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
 
   const actions = [
     { id: 'TRANSFORMATION_BLUEPRINT', mode: 'RESEARCH' as MainMode, title: 'SYSTEM OVERVIEW', desc: 'SYSTEM CAPABILITIES', icon: 'BLUEPRINT' },
-    { id: 'MARKET_DISCOVERY', mode: 'RESEARCH' as MainMode, title: 'REGIONAL SEARCH', desc: 'DISCOVER CLIENTS', icon: 'DISCOVERY' },
-    { id: 'PROSPECT_DATABASE', mode: 'RESEARCH' as MainMode, title: 'CLIENT LEDGER', desc: 'VIEW DATABASE', icon: 'LEDGER' },
+    { id: 'MARKET_DISCOVERY', mode: 'RESEARCH' as MainMode, title: 'REGIONAL SEARCH', desc: 'GENERATE LEADS', icon: 'DISCOVERY' },
+    { id: 'PROSPECT_DATABASE', mode: 'RESEARCH' as MainMode, title: 'LEAD DATABASE', desc: 'VIEW DATABASE', icon: 'LEDGER' },
   ];
 
   return (
