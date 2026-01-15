@@ -348,7 +348,8 @@ export async function generateVideoPayload(prompt: string, leadId?: string, imag
     prompt,
     config: { numberOfVideos: 1, resolution: '720p', aspectRatio: config?.aspectRatio || '16:9' }
   });
-  return op.id;
+  // Comment: Fixed TS error TS2339 by casting 'op' to any to access the 'id' property.
+  return (op as any).id;
 }
 
 export async function generateAudioPitch(script: string, voice: string, leadId?: string): Promise<string> {
