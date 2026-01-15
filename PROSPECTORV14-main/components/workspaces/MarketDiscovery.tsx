@@ -18,14 +18,14 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
 
   const handleScan = async () => {
     if (!market) {
-        toast.error("Please select a target market.");
+        toast.error("Please select a target region.");
         return;
     }
     setLoading(true);
     try {
       const result = await generateLeads(market, niche || 'Business', volume);
       if (!result.leads || !Array.isArray(result.leads)) {
-          throw new Error("Invalid response structure from AI.");
+          throw new Error("Invalid intelligence response.");
       }
 
       const formatted: Lead[] = result.leads.map((l: any, i: number) => ({
@@ -40,11 +40,9 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
         assetGrade: l.assetGrade || 'A'
       }));
 
-      // Merging new findings into permanent database with deduplication logic
       db.upsertLeads(formatted);
-      
       onLeadsGenerated(formatted);
-      toast.success(`${formatted.length} Targets synchronized with the permanent ledger.`);
+      toast.success(`${formatted.length} Client profiles synchronized.`);
     } catch (e: any) {
       console.error(e);
       toast.error(`Discovery Interrupted: ${e.message}`);
@@ -56,7 +54,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
   const handleExport = () => {
     const leads = db.getLeads();
     if (leads.length === 0) {
-      toast.info("Ledger is empty. No data to export.");
+      toast.info("Ledger is empty.");
       return;
     }
     const dataStr = JSON.stringify(leads, null, 2);
@@ -64,12 +62,12 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `PROSPECTOR_LEDGER_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `PROSPECTOR_DATABASE_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("DATABASE_EXPORTED_SUCCESSFULLY");
+    toast.success("DATABASE_EXPORTED");
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,9 +79,9 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
             const imported = JSON.parse(ev.target?.result as string);
             if (Array.isArray(imported)) {
                 db.upsertLeads(imported);
-                toast.success(`IMPORTED AND SYNCHRONIZED ${imported.length} RECORDS`);
+                toast.success(`IMPORTED ${imported.length} RECORDS`);
             } else {
-                toast.error("INVALID_FILE_STRUCTURE");
+                toast.error("INVALID_FILE");
             }
         } catch (err) {
             toast.error("PARSE_FAILURE");
@@ -99,7 +97,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
     <div className="max-w-4xl mx-auto py-12 space-y-12 animate-in fade-in duration-500 pb-40">
       <div className="text-center">
         <h1 className="text-4xl font-black uppercase tracking-tighter text-white leading-none">
-          LEAD <span className="text-emerald-500 italic">DISCOVERY</span>
+          MARKET <span className="text-emerald-500 italic">DISCOVERY</span>
         </h1>
         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.3em] mt-3">Target Region: {market}</p>
       </div>
@@ -135,7 +133,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
           onClick={handleScan} 
           className="w-full bg-emerald-600 hover:bg-emerald-500 py-6 rounded-2xl text-[12px] font-black uppercase tracking-[0.3em] text-white shadow-xl shadow-emerald-600/20 active:scale-95 border-b-4 border-emerald-800 transition-all relative z-10"
         >
-          INITIATE MARKET SCAN
+          START MARKET ANALYSIS
         </button>
       </div>
 
@@ -145,7 +143,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
               onClick={() => fileInputRef.current?.click()}
               className="px-6 py-3 bg-slate-900 border-2 border-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
             >
-              <span>⬆️</span> IMPORT LEDGER
+              <span>⬆️</span> IMPORT DATA
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
             
@@ -153,13 +151,13 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
               onClick={handleExport}
               className="px-6 py-3 bg-slate-900 border-2 border-slate-700 text-slate-400 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
             >
-              <span>⬇️</span> EXPORT LEDGER
+              <span>⬇️</span> EXPORT DATA
             </button>
          </div>
 
          <div className="flex items-center gap-3">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">LOCAL_PERSISTENCE_ACTIVE</span>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">STATE_SYNCHRONIZED</span>
          </div>
       </div>
     </div>

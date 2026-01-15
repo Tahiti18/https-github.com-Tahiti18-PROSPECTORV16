@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Lead, MainMode, SubModule } from '../../types';
 import { Tooltip } from '../Tooltip';
@@ -40,8 +39,8 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
       const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
       setOutreachCount(logs.filter(l => l.timestamp > oneDayAgo).length);
 
-      const merged = [...runs.slice(0, 5).map(r => ({ type: 'AUTO', msg: `WORKFLOW ${r.status}: ${r.leadName}`, time: r.createdAt })),
-                      ...logs.slice(0, 5).map(l => ({ type: 'COMM', msg: `${l.channel.toUpperCase()} SENT: ${l.to || 'Unknown'}`, time: l.timestamp }))]
+      const merged = [...runs.slice(0, 5).map(r => ({ type: 'WORKFLOW', msg: `Task ${r.status}: ${r.leadName}`, time: r.createdAt })),
+                      ...logs.slice(0, 5).map(l => ({ type: 'COMM', msg: `${l.channel.toUpperCase()} DISPATCHED: ${l.to || 'Unknown'}`, time: l.timestamp }))]
                       .sort((a,b) => b.time - a.time).slice(0, 6);
       setRecentLogs(merged);
     };
@@ -55,14 +54,14 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
 
   const stats = [
     { label: 'ACTIVE WORKFLOWS', status: activeWorkflows > 0 ? `${activeWorkflows} RUNNING` : 'IDLE', icon: 'WORKFLOWS', desc: "Ongoing automated agency tasks." },
-    { label: 'SAVED PROSPECTS', status: `${leads.length} RECORDS`, icon: 'RECORDS', desc: "Total database volume." },
-    { label: 'MESSAGES (24H)', status: `${outreachCount} SENT`, icon: 'SENT', desc: "Outreach activity." },
+    { label: 'CLIENT RECORDS', status: `${leads.length} SAVED`, icon: 'RECORDS', desc: "Total database volume." },
+    { label: 'MESSAGES (24H)', status: `${outreachCount} SENT`, icon: 'SENT', desc: "Client engagement activity." },
     { label: 'OPERATING COST', status: `$${sessionCost.toFixed(2)}`, icon: 'COST', desc: "Current session expenses." },
   ];
 
   const actions = [
-    { id: 'TRANSFORMATION_BLUEPRINT', mode: 'RESEARCH' as MainMode, title: 'VIEW BLUEPRINT', desc: 'SYSTEM CAPABILITIES', icon: 'BLUEPRINT' },
-    { id: 'MARKET_DISCOVERY', mode: 'RESEARCH' as MainMode, title: 'SEARCH REGION', desc: 'FIND NEW CLIENTS', icon: 'DISCOVERY' },
+    { id: 'TRANSFORMATION_BLUEPRINT', mode: 'RESEARCH' as MainMode, title: 'SYSTEM OVERVIEW', desc: 'SYSTEM CAPABILITIES', icon: 'BLUEPRINT' },
+    { id: 'MARKET_DISCOVERY', mode: 'RESEARCH' as MainMode, title: 'REGIONAL SEARCH', desc: 'DISCOVER CLIENTS', icon: 'DISCOVERY' },
     { id: 'PROSPECT_DATABASE', mode: 'RESEARCH' as MainMode, title: 'CLIENT LEDGER', desc: 'VIEW DATABASE', icon: 'LEDGER' },
   ];
 
@@ -83,7 +82,7 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
         <h1 className="text-4xl font-black uppercase tracking-tighter text-white leading-none">
           AGENCY <span className="text-emerald-500 italic opacity-90">OVERVIEW</span>
         </h1>
-        <p className="mt-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.6em]">ACTIVE MARKET: <span className="text-emerald-400 italic">{market}</span></p>
+        <p className="mt-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.6em]">ACTIVE REGION: <span className="text-emerald-400 italic">{market}</span></p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -105,7 +104,7 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
          <div className="lg:col-span-2 bg-[#0b1021] border-2 border-slate-800 rounded-[48px] p-10 shadow-2xl flex flex-col">
             <h3 className="text-[11px] font-black text-white uppercase tracking-[0.3em] mb-8 flex items-center gap-4">
                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-               LIVE OPERATIONAL FEED
+               REAL-TIME PROJECT FEED
             </h3>
             <div className="flex-1 space-y-4">
                {recentLogs.length === 0 ? (
@@ -113,7 +112,7 @@ export const ExecutiveDashboard: React.FC<DashboardProps> = ({ leads, market, on
                ) : (
                   recentLogs.map((log, i) => (
                      <div key={i} className="flex items-center gap-5 p-4 bg-slate-900/60 rounded-2xl border-2 border-slate-800/50 hover:border-emerald-500/30 transition-all group">
-                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${log.type === 'AUTO' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-500/20' : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-black transition-colors'}`}>{log.type}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${log.type === 'WORKFLOW' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-500/20' : 'bg-emerald-950/40 text-emerald-400 border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-black transition-colors'}`}>{log.type}</span>
                         <span className="text-[11px] font-bold text-slate-300 truncate flex-1 font-mono uppercase tracking-tight">{log.msg}</span>
                         <span className="text-[9px] font-black text-slate-600 uppercase italic">{new Date(log.time).toLocaleTimeString()}</span>
                      </div>

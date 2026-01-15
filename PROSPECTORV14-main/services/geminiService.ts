@@ -1,8 +1,8 @@
 /* =========================================================
-   GEMINI SERVICE – NATIVE PREVIEW OPTIMIZED
+   GEMINI SERVICE – BUSINESS OPTIMIZED
    ========================================================= */
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Lead, AssetRecord, BenchmarkReport, VeoConfig, GeminiResult, EngineResult, BrandIdentity } from "../types";
 export type { Lead, AssetRecord, BenchmarkReport, VeoConfig, GeminiResult, EngineResult, BrandIdentity };
 
@@ -11,6 +11,30 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const SESSION_ASSETS: AssetRecord[] = [];
 export const PRODUCTION_LOGS: string[] = [];
+
+/* =========================================================
+   KEY STORAGE UTILITIES
+   ========================================================= */
+
+// Comment: Added setStoredKeys to fix error in SecurityGateway.tsx
+/**
+ * Saves OpenRouter and KIE keys to local storage.
+ */
+export function setStoredKeys(openRouter: string, kie: string) {
+  localStorage.setItem('pomelli_or_key', openRouter);
+  localStorage.setItem('pomelli_kie_key', kie);
+}
+
+// Comment: Added getStoredKeys to fix error in VerificationNode.tsx
+/**
+ * Retrieves stored API keys.
+ */
+export function getStoredKeys() {
+  return {
+    openRouter: localStorage.getItem('pomelli_or_key') || '',
+    kie: localStorage.getItem('pomelli_kie_key') || ''
+  };
+}
 
 /* =========================================================
    ASSET HELPERS
@@ -86,7 +110,7 @@ async function callGemini(prompt: string, config?: any): Promise<GeminiResult<st
       ok: false,
       text: "",
       raw: null,
-      error: { message: e?.message ?? "Gemini call failed" }
+      error: { message: e?.message ?? "Intelligence query failed" }
     };
   }
 }
@@ -186,7 +210,7 @@ export async function fetchBenchmarkData(lead: Lead): Promise<BenchmarkReport> {
 }
 
 export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIdentity> {
-  const prompt = `Extract DNA from ${url}.`;
+  const prompt = `Extract identity markers from ${url}.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {} as BrandIdentity; }
 }
@@ -203,17 +227,17 @@ export async function generateVisual(prompt: string, lead: Lead, sourceImage?: s
 }
 
 export async function generateMockup(name: string, niche: string, leadId: string): Promise<string> {
-  const url = await generateVisual(`4K mockup for ${name}`, { businessName: name } as Lead);
+  const url = await generateVisual(`4K high-end mockup for ${name}`, { businessName: name } as Lead);
   return url || "https://via.placeholder.com/1024";
 }
 
 export async function generateFlashSparks(lead: Lead): Promise<string[]> {
-  const result = await callGemini(`Viral sparks for ${lead.businessName}.`);
+  const result = await callGemini(`Creative hooks for ${lead.businessName}.`);
   return result.text.split('\n').filter(s => s.trim());
 }
 
 export async function generateOutreachSequence(lead: Lead): Promise<any[]> {
-  const result = await callGemini(`5-day sequence for ${lead.businessName}.`, { responseMimeType: "application/json" });
+  const result = await callGemini(`5-day engagement sequence for ${lead.businessName}.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return []; }
 }
 
@@ -223,7 +247,7 @@ export async function generateOutreachSequence(lead: Lead): Promise<any[]> {
  */
 export async function generateProposalDraft(lead: Lead): Promise<string> {
   const prompt = `
-    GENERATE_PROPOSAL_V15: Create a high-fidelity strategic transformation proposal for ${lead.businessName}.
+    GENERATE_PROPOSAL: Create a high-fidelity strategic transformation proposal for ${lead.businessName}.
     
     Structure the response using this EXACT UI_BLOCKS JSON schema:
     {
@@ -234,32 +258,32 @@ export async function generateProposalDraft(lead: Lead): Promise<string> {
         {
           "heading": "EXECUTIVE SUMMARY",
           "body": [
-            { "type": "hero", "content": "Autonomous growth architecture designed to eliminate visual friction and automate market dominance." },
-            { "type": "p", "content": "Detailed overview of why now is the time for ${lead.businessName} to pivot to an AI-first brand strategy." }
+            { "type": "hero", "content": "Modern growth architecture designed to optimize branding and automate customer engagement." },
+            { "type": "p", "content": "Detailed overview of why now is the time for ${lead.businessName} to adopt an AI-augmented brand strategy." }
           ]
         },
         {
-          "heading": "DETECTED VULNERABILITIES",
+          "heading": "IDENTIFIED OPPORTUNITIES",
           "body": [
-             { "type": "heading", "content": "THE SOCIAL AUTHORITY GAP" },
+             { "type": "heading", "content": "THE BRAND AUTHORITY GAP" },
              { "type": "p", "content": "${lead.socialGap}" },
-             { "type": "bullets", "content": ["Static engagement patterns", "Outdated visual hierarchy", "Manual reporting latency"] }
+             { "type": "bullets", "content": ["Static engagement patterns", "Opportunity for visual hierarchy upgrade", "Process automation potential"] }
           ]
         },
         {
           "heading": "SOLUTION ARCHITECTURE",
           "body": [
-            { "type": "heading", "content": "PHASE 1: NEURAL REBRANDING" },
-            { "type": "p", "content": "Deploying 4K visual assets and cinematic video payloads to establish immediate dominance." },
-            { "type": "heading", "content": "PHASE 2: AUTOMATED PIPELINE" },
-            { "type": "p", "content": "Integration of the AI Concierge and multi-channel outreach engine." }
+            { "type": "heading", "content": "PHASE 1: BRAND IDENTITY ENHANCEMENT" },
+            { "type": "p", "content": "Deploying 4K visual assets and cinematic video sequences to establish premium market presence." },
+            { "type": "heading", "content": "PHASE 2: AUTOMATED ENGAGEMENT" },
+            { "type": "p", "content": "Integration of digital assistants and multi-channel outreach frameworks." }
           ]
         },
         {
           "heading": "ROI PROJECTION",
           "body": [
             { "type": "p", "content": "Financial modeling based on industry benchmarks for ${lead.niche}." },
-            { "type": "bullets", "content": ["90% reduction in reporting overhead", "3.5x increase in qualified inquiry rate", "Consistent global brand synchronization"] }
+            { "type": "bullets", "content": ["Significant reduction in operational overhead", "Enhanced qualified inquiry rate", "Global brand consistency"] }
           ]
         }
       ]
@@ -276,27 +300,27 @@ export async function generateROIReport(ltv: number, leads: number, conv: number
 }
 
 export async function architectFunnel(lead: Lead): Promise<any[]> {
-  const result = await callGemini(`Funnel for ${lead.businessName}.`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Conversion map for ${lead.businessName}.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return []; }
 }
 
 export async function architectPitchDeck(lead: Lead): Promise<any> {
-  const result = await callGemini(`Pitch deck for ${lead.businessName}.`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Presentation structure for ${lead.businessName}.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
 export async function generateTaskMatrix(lead: Lead): Promise<any[]> {
-  const result = await callGemini(`Task matrix for ${lead.businessName}.`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Project plan for ${lead.businessName}.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return []; }
 }
 
 export async function generateNurtureDialogue(lead: Lead, scenario: string): Promise<any[]> {
-  const result = await callGemini(`Nurture for ${lead.businessName}: ${scenario}`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Engagement dialogue for ${lead.businessName}: ${scenario}`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return []; }
 }
 
 export async function synthesizeProduct(lead: Lead): Promise<any> {
-  const result = await callGemini(`Offer for ${lead.businessName}.`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Service offer for ${lead.businessName}.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
@@ -306,12 +330,12 @@ export async function openRouterChat(prompt: string, system?: string): Promise<s
 }
 
 export async function performFactCheck(lead: Lead, claim: string): Promise<any> {
-  const result = await callGemini(`Fact check: ${claim}`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Validation check: ${claim}`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return { status: 'Unknown' }; }
 }
 
 export async function translateTactical(text: string, lang: string): Promise<string> {
-  const result = await callGemini(`Translate to ${lang}: ${text}`);
+  const result = await callGemini(`Localize to ${lang}: ${text}`);
   return result.text;
 }
 
@@ -334,207 +358,13 @@ export async function generateVideoPayload(prompt: string, leadId?: string, imag
     prompt,
     config: { numberOfVideos: 1, resolution: '720p', aspectRatio: config?.aspectRatio || '16:9' }
   });
-  return op.id;
+  return (op as any).id;
 }
 
-export async function enhanceVideoPrompt(prompt: string): Promise<string> {
-  const result = await callGemini(`Enhance prompt: ${prompt}`);
+export async function enhanceStrategicPrompt(prompt: string): Promise<string> {
+  const result = await callGemini(`Refine professional prompt: ${prompt}`);
   return result.text;
 }
-
-export async function generateMotionLabConcept(lead: Lead): Promise<any> {
-  const result = await callGemini(`Storyboard for ${lead.businessName}`, { responseMimeType: "application/json" });
-  try { return JSON.parse(result.text); } catch { return {}; }
-}
-
-export async function generateAgencyIdentity(niche: string, region: string): Promise<any> {
-  const result = await callGemini(`Agency in ${region}, ${niche}`, { responseMimeType: "application/json" });
-  try { return JSON.parse(result.text); } catch { return {}; }
-}
-
-/**
- * Orchestrates a high-fidelity campaign package for a lead.
- * This is the primary intelligence engine for the Campaign Architect.
- */
-export async function orchestrateBusinessPackage(lead: Lead, assets: AssetRecord[]): Promise<any> {
-  const prompt = `
-    MISSION_ORCHESTRATION_V15: Perform exhaustive strategic architecture for ${lead.businessName}.
-    
-    CLIENT_PROFILE:
-    - Business: ${lead.businessName}
-    - Niche: ${lead.niche}
-    - Market Gaps: ${lead.socialGap}
-    - Existing Signals: ${lead.visualProof}
-    - Key Contact: ${lead.email}
-
-    TASK: Generate a multi-layered campaign that targets their specific "Social Deficit" and "Visual Gap."
-    Ensure the Brand Style Guide includes specific HEX codes and high-level typography.
-    The Outreach must include Email, LinkedIn, and a Phone script.
-    The Funnel must be a 5-step detailed conversion roadmap.
-  `;
-
-  const result = await callGemini(prompt, { 
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: Type.OBJECT,
-      properties: {
-        presentation: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            slides: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  category: { type: Type.STRING, description: "e.g. MARKET_FORCES, SOLUTION, ROI, ROADMAP" },
-                  bullets: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  insight: { type: Type.STRING, description: "The deep 'why' behind this slide." }
-                },
-                required: ["title", "bullets", "category"]
-              }
-            }
-          },
-          required: ["title", "slides"]
-        },
-        narrative: { type: Type.STRING },
-        contentPack: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              platform: { type: Type.STRING },
-              type: { type: Type.STRING, description: "e.g. HOOK, EDUCATION, PROOF" },
-              caption: { type: Type.STRING },
-              visualDirective: { type: Type.STRING }
-            },
-            required: ["platform", "type", "caption"]
-          }
-        },
-        funnel: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              conversionGoal: { type: Type.STRING },
-              frictionFix: { type: Type.STRING, description: "How AI removes the specific sales hurdle." }
-            },
-            required: ["title", "description", "conversionGoal"]
-          }
-        },
-        outreach: {
-          type: Type.OBJECT,
-          properties: {
-            emailSequence: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  subject: { type: Type.STRING },
-                  body: { type: Type.STRING }
-                },
-                required: ["subject", "body"]
-              }
-            },
-            linkedinSequence: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  type: { type: Type.STRING, description: "e.g. CONNECTION_REQUEST, FOLLOW_UP" },
-                  message: { type: Type.STRING }
-                }
-              }
-            },
-            callScript: {
-              type: Type.OBJECT,
-              properties: {
-                opener: { type: Type.STRING },
-                hook: { type: Type.STRING },
-                closing: { type: Type.STRING }
-              }
-            }
-          },
-          required: ["emailSequence", "linkedinSequence", "callScript"]
-        },
-        visualDirection: {
-          type: Type.OBJECT,
-          properties: {
-            brandMood: { type: Type.STRING },
-            colorPalette: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  color: { type: Type.STRING },
-                  hex: { type: Type.STRING },
-                  logic: { type: Type.STRING }
-                }
-              }
-            },
-            typography: {
-              type: Type.OBJECT,
-              properties: {
-                heading: { type: Type.STRING },
-                body: { type: Type.STRING }
-              }
-            },
-            aiImagePrompts: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  use_case: { type: Type.STRING },
-                  prompt: { type: Type.STRING }
-                },
-                required: ["use_case", "prompt"]
-              }
-            }
-          },
-          required: ["brandMood", "colorPalette", "typography", "aiImagePrompts"]
-        }
-      },
-      required: ["presentation", "narrative", "contentPack", "funnel", "outreach", "visualDirection"]
-    }
-  });
-
-  if (!result.ok) return {};
-  try {
-    return JSON.parse(result.text);
-  } catch (e) {
-    return {};
-  }
-}
-
-export async function fetchViralPulseData(niche: string): Promise<any[]> {
-  const result = await callGemini(`Trends in ${niche}`, { responseMimeType: "application/json" });
-  try { return JSON.parse(result.text); } catch { return []; }
-}
-
-export async function queryRealtimeAgent(prompt: string): Promise<{ text: string, sources: any[] }> {
-  const result = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: prompt,
-    config: { tools: [{ googleSearch: {} }] }
-  });
-  return {
-    text: result.text || "",
-    sources: result.candidates?.[0]?.groundingMetadata?.groundingChunks || []
-  };
-}
-
-export async function testModelPerformance(model: string, prompt: string): Promise<string> {
-  return (await callGemini(prompt)).text;
-}
-
-export function getStoredKeys() {
-  return { openRouter: "PLATFORM_MANAGED", kie: "PLATFORM_MANAGED" };
-}
-
-export function setStoredKeys(orKey: string, kieKey: string) { return true; }
 
 export async function loggedGenerateContent(params: { module: string; contents: string | any; config?: any; }): Promise<string> {
   const prompt = typeof params.contents === 'string' ? params.contents : JSON.stringify(params.contents);
@@ -544,12 +374,12 @@ export async function loggedGenerateContent(params: { module: string; contents: 
 }
 
 export async function generateAffiliateProgram(niche: string): Promise<any> {
-  const result = await callGemini(`Affiliate for ${niche}`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Partner program for ${niche}`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
 export async function synthesizeArticle(source: string, mode: string): Promise<string> {
-  return (await callGemini(`Article ${mode}: ${source}`)).text;
+  return (await callGemini(`Summary ${mode}: ${source}`)).text;
 }
 
 export async function crawlTheaterSignals(sector: string, signal: string): Promise<Lead[]> {
@@ -563,7 +393,7 @@ export async function identifySubRegions(theater: string): Promise<string[]> {
 }
 
 export async function simulateSandbox(lead: Lead, ltv: number, volume: number): Promise<string> {
-  return (await callGemini(`Sandbox: LTV=${ltv}, Vol=${volume} for ${lead.businessName}`)).text;
+  return (await callGemini(`Projected Simulation: LTV=${ltv}, Vol=${volume} for ${lead.businessName}`)).text;
 }
 
 /**
@@ -572,30 +402,30 @@ export async function simulateSandbox(lead: Lead, ltv: number, volume: number): 
  */
 export async function generatePitch(lead: Lead): Promise<string> {
   const prompt = `
-    TASK: Generate a definitive pitch script for ${lead.businessName}.
+    TASK: Generate a definitive sales pitch for ${lead.businessName}.
     Structure the response using this EXACT UI_BLOCKS JSON schema:
     {
       "format": "ui_blocks",
       "title": "PITCH GENERATOR",
-      "subtitle": "ELEVATOR SCRIPTS FOR ${lead.businessName.toUpperCase()}",
+      "subtitle": "ENGAGEMENT SCRIPTS FOR ${lead.businessName.toUpperCase()}",
       "sections": [
         {
           "heading": "1. THE CLIENT PITCH (B2B)",
           "body": [
-            { "type": "hero", "content": "Why they should hire you for AI transformation." },
-            { "type": "p", "content": "Concise, 30-second high-impact script focused on ROI and competitive advantage." }
+            { "type": "hero", "content": "Strategic value proposition for AI-driven growth." },
+            { "type": "p", "content": "Concise, 30-second high-impact script focused on efficiency and competitive advantage." }
           ]
         },
         {
           "heading": "2. THE CANDIDATE PITCH",
           "body": [
-            { "type": "p", "content": "How to attract top-tier talent to ${lead.businessName} by selling the vision." }
+            { "type": "p", "content": "Attracting top-tier talent to ${lead.businessName} by showcasing innovation." }
           ]
         },
         {
-          "heading": "3. THE COLD OPENER",
+          "heading": "3. THE INITIAL HOOK",
           "body": [
-            { "type": "bullets", "content": ["Immediate value hook", "Vulnerability reference", "Call-to-action"] }
+            { "type": "bullets", "content": ["Immediate value proposition", "Growth opportunity reference", "Strategic call-to-action"] }
           ]
         }
       ]
@@ -606,20 +436,103 @@ export async function generatePitch(lead: Lead): Promise<string> {
 }
 
 export async function generatePlaybookStrategy(niche: string): Promise<any> {
-  const result = await callGemini(`Playbook for ${niche}`, { responseMimeType: "application/json" });
+  const result = await callGemini(`Operations guide for ${niche}`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
 export async function fetchTokenStats(): Promise<any> { return { recentOps: [] }; }
 
 export async function critiqueVideoPresence(lead: Lead): Promise<string> {
-  return (await callGemini(`Critique video for ${lead.businessName}`)).text;
+  return (await callGemini(`Creative review for ${lead.businessName}`)).text;
 }
 
+export async function enhanceVideoPrompt(prompt: string): Promise<string> {
+  const result = await callGemini(`Refine visual prompt: ${prompt}`);
+  return result.text;
+}
+
+export async function orchestrateBusinessPackage(lead: Lead, assets: AssetRecord[]): Promise<any> {
+  const prompt = `Develop a comprehensive client engagement briefing for ${lead.businessName}. 
+  Include market analysis, strategy, outreach plans, and creative direction.
+  Use provided data as context: ${JSON.stringify(assets.map(a => ({ type: a.type, title: a.title, data: a.data })))}`;
+  
+  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  try { return JSON.parse(result.text); } catch { return { narrative: "Strategic briefing complete." }; }
+}
+
+export async function queryRealtimeAgent(query: string): Promise<{ text: string; sources: any[] }> {
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: query,
+    config: {
+      tools: [{ googleSearch: {} }],
+    },
+  });
+
+  return {
+    text: response.text || "",
+    sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+  };
+}
+
+export async function testModelPerformance(model: string, prompt: string): Promise<string> {
+  const response = await ai.models.generateContent({
+    model: model as any,
+    contents: prompt,
+  });
+  return response.text || "";
+}
+
+export async function generateMotionLabConcept(lead: Lead): Promise<any> {
+  const prompt = `Create a professional storyboard for ${lead.businessName}. Return JSON with title, hook, and scenes (array of {time, visual, text}).`;
+  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  try { return JSON.parse(result.text); } catch { return null; }
+}
+
+export async function fetchViralPulseData(niche: string): Promise<any[]> {
+  const prompt = `Identify top industry trends for the ${niche} sector. Return JSON array of objects with label, type ('up'/'down'), and val (number).`;
+  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  try {
+    const parsed = JSON.parse(result.text);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function generateAgencyIdentity(niche: string, region: string): Promise<any> {
+  const prompt = `Generate a professional agency profile for a company in ${niche} focusing on ${region}. 
+  Return JSON with name, tagline, professional statement, and branding hex codes (array).`;
+  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  try { return JSON.parse(result.text); } catch { return {}; }
+}
+
+// Comment: Added generateAudioPitch to fix error in orchestratorPhase1.ts
+/**
+ * Generates an audio pitch using Gemini TTS.
+ * Returns a data URL containing base64 raw PCM data.
+ */
 export async function generateAudioPitch(script: string, voice: string, leadId?: string): Promise<string> {
-  return "PLATFORM_TTS_ACTIVE";
-}
-
-export async function enhanceStrategicPrompt(prompt: string): Promise<string> {
-  return (await callGemini(`Enhance strategic prompt: ${prompt}`)).text;
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-preview-tts",
+    contents: [{ parts: [{ text: script }] }],
+    config: {
+      responseModalities: [Modality.AUDIO],
+      speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: voice || 'Kore' },
+          },
+      },
+    },
+  });
+  
+  const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+  if (base64Audio) {
+      const dataUrl = `data:audio/pcm;base64,${base64Audio}`;
+      if (leadId) {
+          saveAsset('AUDIO', `Pitch for ${leadId}`, dataUrl, 'AUDIO_STUDIO', leadId);
+      }
+      return dataUrl;
+  }
+  throw new Error("Audio generation failed");
 }

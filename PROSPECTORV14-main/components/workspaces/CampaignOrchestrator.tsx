@@ -1,7 +1,3 @@
-/* =========================================================
-   CAMPAIGN ORCHESTRATOR – ENHANCED V15
-   ========================================================= */
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Lead, MainMode, SubModule } from '../../types';
 import { SESSION_ASSETS, orchestrateBusinessPackage } from '../../services/geminiService';
@@ -43,22 +39,22 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
 
   const handleOrchestrate = async () => {
     if (!lockedLead) {
-        toast.info("Target identification required.");
+        toast.info("Client identification required.");
         return;
     }
     setIsOrchestrating(true);
     setPackageData(null); 
     
     try {
-      toast.neural("FORGE: Initiating High-Density Intelligence Sweep...");
+      toast.neural("STRATEGIC_SYNC: Initiating Business Intelligence Sweep...");
       const result = await orchestrateBusinessPackage(lockedLead, leadAssets);
       
       dossierStorage.save(lockedLead, result, leadAssets.map(a => a.id));
       setPackageData(result);
-      toast.success("FORGE: High-Density Intelligence Mesh Synchronized.");
+      toast.success("SUCCESS: Strategic Intelligence Synchronized.");
     } catch (e: any) {
       console.error(e);
-      toast.error(`NEURAL_FAULT: ${e.message || "Uplink timed out."}`);
+      toast.error(`ERROR: ${e.message || "Connection timed out."}`);
     } finally {
       setIsOrchestrating(false);
     }
@@ -74,9 +70,9 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
           <div className="max-w-4xl mx-auto py-40 text-center space-y-12 animate-in fade-in duration-700">
               <span className="text-8xl block grayscale opacity-20">🎯</span>
               <div className="space-y-4">
-                  <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Mission Target Selection</h2>
+                  <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">Client Selection</h2>
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.4em] max-w-sm mx-auto">
-                      Establish a primary prospect to initialize the high-density campaign forge.
+                      Establish a primary prospect to initialize the campaign generator.
                   </p>
               </div>
               <div className="max-w-md mx-auto">
@@ -84,7 +80,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                     onChange={(e) => handleLocalSelect(e.target.value)}
                     className="w-full bg-[#0b1021] border-2 border-slate-800 rounded-2xl px-6 py-5 text-sm font-bold text-slate-400 focus:border-emerald-500 outline-none appearance-none cursor-pointer uppercase italic text-center"
                  >
-                    <option value="">-- SELECT TARGET FROM LEDGER --</option>
+                    <option value="">-- SELECT CLIENT FROM LEDGER --</option>
                     {leads.map(l => <option key={l.id} value={l.id}>{l.businessName}</option>)}
                  </select>
               </div>
@@ -98,10 +94,10 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
       <div className="flex justify-between items-end border-b border-slate-800/50 pb-8">
         <div>
           <h1 className="text-4xl font-black italic text-white uppercase tracking-tighter leading-none">
-            CAMPAIGN <span className="text-emerald-500 not-italic">FORGE</span>
+            CAMPAIGN <span className="text-emerald-500 not-italic">ENGINE</span>
           </h1>
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] mt-2 italic">
-            SECURED NEURAL CORE GATEWAY: {lockedLead.businessName.toUpperCase()}
+            SECURED PROJECT GATEWAY: {lockedLead.businessName.toUpperCase()}
           </p>
         </div>
         <div className="flex gap-4">
@@ -110,7 +106,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                 disabled={isOrchestrating}
                 className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] transition-all shadow-xl active:scale-95 border-b-4 border-emerald-800"
             >
-                {isOrchestrating ? 'ORCHESTRATING...' : 'INITIATE CAMPAIGN FORGE'}
+                {isOrchestrating ? 'GENERATING...' : 'GENERATE CAMPAIGN'}
             </button>
         </div>
       </div>
@@ -122,11 +118,11 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                     <div className="relative">
                         <div className="w-24 h-24 border-4 border-emerald-900 rounded-full"></div>
                         <div className="absolute top-0 left-0 w-24 h-24 border-t-4 border-emerald-500 rounded-full animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center text-3xl">🧠</div>
+                        <div className="absolute inset-0 flex items-center justify-center text-3xl">💡</div>
                     </div>
                     <div className="space-y-3">
-                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">NEURAL FORGE ACTIVE</h3>
-                        <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-[0.6em] animate-pulse">ARCHITECTING EXHAUSTIVE INTELLIGENCE MESH</p>
+                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">STRATEGIC ANALYSIS ACTIVE</h3>
+                        <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-[0.6em] animate-pulse">ARCHITECTING COMPREHENSIVE SOLUTION FRAMEWORK</p>
                     </div>
                  </div>
               )}
@@ -142,9 +138,9 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                          { id: 'strategy', label: 'STRATEGY' },
                          { id: 'narrative', label: 'NARRATIVE' },
                          { id: 'content', label: 'CONTENT' },
-                         { id: 'funnel', label: 'FUNNEL' },
+                         { id: 'funnel', label: 'CONVERSION' },
                          { id: 'outreach', label: 'OUTREACH' },
-                         { id: 'visual', label: 'VISUALS' }
+                         { id: 'visual', label: 'BRANDING' }
                        ].map(tab => (
                          <button
                            key={tab.id}
@@ -163,7 +159,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                     <div className="flex-1 p-12 overflow-y-auto custom-scrollbar bg-[#020617]">
                        {activeTab === 'strategy' && (
                           <div className="space-y-10">
-                             <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">{packageData?.presentation?.title || "STRATEGY Blueprint"}</h2>
+                             <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">{packageData?.presentation?.title || "STRATEGY Framework"}</h2>
                              <div className="grid gap-6">
                                 {packageData?.presentation?.slides?.map((s: any, i: number) => (
                                   <div key={i} className="bg-slate-900 border border-slate-800 p-8 rounded-[32px] group hover:border-emerald-500/30 transition-all relative overflow-hidden">
@@ -182,7 +178,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                                      </ul>
                                      {s.insight && (
                                          <div className="p-4 bg-slate-950/50 border border-emerald-500/10 rounded-2xl">
-                                             <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mb-1">CORE_INSIGHT</p>
+                                             <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest mb-1">STRATEGIC_INSIGHT</p>
                                              <p className="text-[11px] text-slate-500 italic font-medium">"{s.insight}"</p>
                                          </div>
                                      )}
@@ -197,9 +193,9 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                              <div className="absolute top-0 left-0 w-full h-1.5 bg-emerald-600"></div>
                              <h3 className="text-[10px] font-black text-emerald-500 uppercase mb-8 tracking-widest flex items-center gap-3">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                EXECUTIVE_THESIS
+                                EXECUTIVE_OVERVIEW
                              </h3>
-                             <p className="text-2xl text-slate-200 italic font-medium leading-relaxed font-serif whitespace-pre-wrap">{packageData?.narrative || "Synthesis pending..."}</p>
+                             <p className="text-2xl text-slate-200 italic font-medium leading-relaxed font-serif whitespace-pre-wrap">{packageData?.narrative || "Analysis pending..."}</p>
                           </div>
                        )}
 
@@ -242,15 +238,15 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                              {outreachSubTab === 'call' && packageData?.outreach?.callScript && (
                                  <div className="bg-[#0b1021] border border-slate-800 p-12 rounded-[48px] space-y-10 animate-in zoom-in-95">
                                      <div className="space-y-4">
-                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">1. THE OPENER</span>
+                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">1. INTRODUCTION</span>
                                          <p className="text-lg font-black text-white italic uppercase tracking-tighter">{packageData.outreach.callScript.opener}</p>
                                      </div>
                                      <div className="space-y-4">
-                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">2. THE HOOK (VALUE PROP)</span>
+                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">2. VALUE PROPOSITION</span>
                                          <p className="text-sm font-bold text-slate-300 leading-relaxed italic">"{packageData.outreach.callScript.hook}"</p>
                                      </div>
                                      <div className="space-y-4">
-                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">3. THE CLOSING</span>
+                                         <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest block border-b border-emerald-500/20 pb-2">3. CALL TO ACTION</span>
                                          <p className="text-sm font-black text-emerald-400 italic">{packageData.outreach.callScript.closing}</p>
                                      </div>
                                  </div>
@@ -271,7 +267,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                                         <p className="text-sm text-slate-400 font-medium italic">"{f.description}"</p>
                                         {f.frictionFix && (
                                             <div className="mt-4 p-4 bg-slate-950 border border-slate-800 rounded-2xl">
-                                                <p className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">AI_TRANSFORMATION_VECTOR</p>
+                                                <p className="text-[9px] font-black text-emerald-500/60 uppercase tracking-widest mb-1">OPTIMIZATION_VECTOR</p>
                                                 <p className="text-[11px] text-slate-500 font-bold uppercase">{f.frictionFix}</p>
                                             </div>
                                         )}
@@ -299,11 +295,10 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
 
                        {activeTab === 'visual' && (
                           <div className="space-y-12">
-                            {/* BRAND STYLE GUIDE HEADER */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                                 <div className="lg:col-span-7 space-y-10">
                                     <div className="bg-[#0b1021] border border-slate-800 p-10 rounded-[48px] shadow-inner space-y-8">
-                                        <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em] italic mb-4">COLOR PALETTE (NEURAL SYNC)</h4>
+                                        <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.4em] italic mb-4">COLOR PALETTE</h4>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                             {packageData?.visualDirection?.colorPalette?.map((c: any, i: number) => (
                                                 <div key={i} className="space-y-3 group">
@@ -316,21 +311,21 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                                             ))}
                                         </div>
                                         <div className="p-6 bg-slate-950 rounded-3xl border border-slate-800">
-                                             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">AESTHETIC_LOGIC</p>
+                                             <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">AESTHETIC_FRAMEWORK</p>
                                              <p className="text-xs text-slate-400 italic">"{packageData?.visualDirection?.brandMood}"</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="lg:col-span-5">
                                     <div className="bg-[#0b1021] border border-slate-800 p-10 rounded-[48px] shadow-inner space-y-8 h-full">
-                                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] italic">TYPOGRAPHY HIERARCHY</h4>
+                                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] italic">BRAND TYPOGRAPHY</h4>
                                         <div className="space-y-10 py-4">
                                             <div className="space-y-2">
                                                 <p className="text-[8px] font-black text-slate-600 uppercase">HEADING (H1-H3)</p>
                                                 <p className="text-4xl font-black text-white italic truncate tracking-tighter" style={{ fontFamily: 'serif' }}>{packageData?.visualDirection?.typography?.heading || 'Serif Bold'}</p>
                                             </div>
                                             <div className="space-y-2">
-                                                <p className="text-[8px] font-black text-slate-600 uppercase">BODY (PARAGRAPH)</p>
+                                                <p className="text-[8px] font-black text-slate-600 uppercase">BODY TEXT</p>
                                                 <p className="text-xl font-medium text-slate-400 truncate tracking-tight">{packageData?.visualDirection?.typography?.body || 'Sans Regular'}</p>
                                             </div>
                                         </div>
@@ -342,10 +337,10 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                                 {packageData?.visualDirection?.aiImagePrompts?.map((p: any, i: number) => (
                                     <div key={i} className="bg-slate-900 border border-slate-800 p-8 rounded-[32px] space-y-4 hover:border-emerald-500/40 transition-all">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{p.use_case} PLATE</span>
+                                            <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">{p.use_case} DIRECTIVE</span>
                                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                                         </div>
-                                        <p className="text-xs text-slate-400 font-mono italic leading-relaxed bg-black/40 p-5 rounded-2xl border border-white/5">"{p.prompt}"</p>
+                                        <p className="text-xs text-slate-400 font-mono italic leading-relaxed bg-black/30 p-5 rounded-2xl border border-white/5">"{p.prompt}"</p>
                                     </div>
                                 ))}
                             </div>
@@ -359,7 +354,7 @@ export const CampaignOrchestrator: React.FC<CampaignOrchestratorProps> = ({ lead
                             onClick={() => setIsOutreachOpen(true)}
                             className="bg-indigo-600 hover:bg-indigo-500 text-white px-12 py-5 rounded-2xl text-[12px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 border-b-4 border-indigo-800"
                         >
-                            DEPLOY OUTREACH HUB
+                            ACCESS OUTREACH HUB
                         </button>
                     </div>
                  </div>

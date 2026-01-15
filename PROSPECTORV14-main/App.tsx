@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { MainMode, SubModule, Lead } from './types';
 import { LayoutZenith } from './components/LayoutZenith';
@@ -163,10 +162,10 @@ const App: React.FC = () => {
         {renderContent()}
         <CommandPalette isOpen={isCommandOpen} onClose={() => setIsCommandOpen(false)} onSelect={navigate} theme="dark" />
         <footer className="fixed bottom-0 left-0 right-0 backdrop-blur-3xl border-t border-slate-800/50 px-10 py-2 flex justify-between items-center z-[100] bg-[#020617]/80 text-[9px] font-black uppercase tracking-widest text-slate-600 pointer-events-none">
-            <div className="flex gap-4"><span>SYSTEM: OPERATIONAL</span><span>V14.8 (STRIPE_RESTORED)</span></div>
+            <div className="flex gap-4"><span>STATUS: OPERATIONAL</span><span>V16.2 (CORPORATE)</span></div>
             <div className="flex gap-4">
-                <span>CORE: GEMINI_3_FLASH</span>
-                <span>TARGET: {lockedLead ? lockedLead.businessName.toUpperCase() : 'NO TARGET LOCKED'}</span>
+                <span>ENGINE: GEMINI_3_FLASH</span>
+                <span>CLIENT: {lockedLead ? lockedLead.businessName.toUpperCase() : 'NO ACTIVE SELECTION'}</span>
             </div>
         </footer>
       </LayoutZenith>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MainMode, SubModule } from '../types';
 import { Tooltip } from './Tooltip';
@@ -97,22 +96,22 @@ const SubModuleIcon = ({ id, active }: { id: SubModule; active: boolean }) => {
 
 const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: string; desc: string }[]>> = {
   RESEARCH: {
-    "CORE INTELLIGENCE": [
+    "CORE INSIGHTS": [
       { id: 'EXECUTIVE_DASHBOARD', label: 'Executive Dashboard', desc: 'Main operational overview' },
-      { id: 'TRANSFORMATION_BLUEPRINT', label: 'Capability Matrix', desc: 'Full-scale marketing blueprint' },
-      { id: 'USER_GUIDE', label: 'User Guide', desc: 'Exhaustive feature directory' },
-      { id: 'MARKET_DISCOVERY', label: 'Lead Discovery', desc: 'Locate high-value prospects' },
-      { id: 'AUTOMATED_SEARCH', label: 'Automated Search', desc: 'Autonomous lead identification' },
+      { id: 'TRANSFORMATION_BLUEPRINT', label: 'System Overview', desc: 'Full-scale marketing blueprint' },
+      { id: 'USER_GUIDE', label: 'System Manual', desc: 'Exhaustive feature directory' },
+      { id: 'MARKET_DISCOVERY', label: 'Market Discovery', desc: 'Locate high-value prospects' },
+      { id: 'AUTOMATED_SEARCH', label: 'Intelligence Scan', desc: 'Autonomous lead identification' },
       { id: 'MARKET_TRENDS', label: 'Market Trends', desc: 'Real-time industry insights' },
     ],
     "CRM & STRATEGY": [
-      { id: 'PROSPECT_DATABASE', label: 'Prospect Database', desc: 'Master contact ledger' },
+      { id: 'PROSPECT_DATABASE', label: 'Client Ledger', desc: 'Master contact database' },
       { id: 'STRATEGY_CENTER', label: 'Strategy Hub', desc: 'Deep-dive business audits' },
       { id: 'PIPELINE', label: 'Growth Pipeline', desc: 'Opportunity lifecycle tracking' },
       { id: 'ANALYTICS_HUB', label: 'Business Analytics', desc: 'Aggregate performance data' },
     ],
-    "ANALYSIS TOOLS": [
-      { id: 'BENCHMARK', label: 'Benchmark Analysis', desc: 'Cross-industry comparison' },
+    "ANALYSIS CENTER": [
+      { id: 'BENCHMARK', label: 'Benchmarking', desc: 'Cross-industry comparison' },
       { id: 'VISUAL_ANALYSIS', label: 'Visual Audit', desc: 'Website and asset review' },
       { id: 'STRATEGIC_REASONING', label: 'Strategic Logic', desc: 'Advanced problem solving' },
     ]
@@ -120,43 +119,43 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
   DESIGN: {
     "BRAND STUDIO": [
       { id: 'VISUAL_STUDIO', label: 'Visual Studio', desc: 'Identity asset generation' },
-      { id: 'BRAND_DNA', label: 'Brand DNA', desc: 'Core style extraction' },
-      { id: 'MOCKUPS_4K', label: 'High-Res Mockups', desc: 'Commercial visualization' },
+      { id: 'BRAND_DNA', label: 'Brand Identity', desc: 'Core style extraction' },
+      { id: 'MOCKUPS_4K', label: 'Mockup Studio', desc: 'Commercial visualization' },
     ],
     "ASSETS": [
       { id: 'PRODUCT_SYNTHESIS', label: 'Offer Synthesis', desc: 'Solution architecture' },
-      { id: 'CONTENT_IDEATION', label: 'Content Ideation', desc: 'Campaign concept hooks' },
+      { id: 'CONTENT_IDEATION', label: 'Creative Briefs', desc: 'Campaign concept hooks' },
       { id: 'ASSET_LIBRARY', label: 'Asset Library', desc: 'Central media repository' },
     ]
   },
   MEDIA: {
-    "VIDEO PRODUCTION": [
+    "MEDIA PRODUCTION": [
       { id: 'VIDEO_PRODUCTION', label: 'Video Studio', desc: 'Cinematic ad synthesis' },
-      { id: 'VIDEO_AUDIT', label: 'Video Audit', desc: 'Digital presence review' },
-      { id: 'VIDEO_INSIGHTS', label: 'Media Insights', desc: 'Content performance analysis' },
-      { id: 'MOTION_LAB', label: 'Motion Lab', desc: 'Dynamic storyboard architecture' },
+      { id: 'VIDEO_AUDIT', label: 'Content Review', desc: 'Digital presence review' },
+      { id: 'VIDEO_INSIGHTS', label: 'Media Analytics', desc: 'Content performance analysis' },
+      { id: 'MOTION_LAB', label: 'Storyboard Studio', desc: 'Dynamic visual architecture' },
     ],
     "AUDIO": [
       { id: 'SONIC_STUDIO', label: 'Sonic Studio', desc: 'Voice and music engineering' },
-      { id: 'MEETING_NOTES', label: 'Executive Scribe', desc: 'Meeting summary and tasks' },
+      { id: 'MEETING_NOTES', label: 'Project Scribe', desc: 'Meeting summary and tasks' },
     ]
   },
   OUTREACH: {
     "CAMPAIGN": [
-      { id: 'CAMPAIGN_ORCHESTRATOR', label: 'Campaign Architect', desc: 'End-to-end deployment' },
+      { id: 'CAMPAIGN_ORCHESTRATOR', label: 'Campaign Engine', desc: 'End-to-end deployment' },
       { id: 'PRESENTATION_BUILDER', label: 'Deck Architect', desc: 'Presentation design' },
-      { id: 'FUNNEL_MAP', label: 'Funnel Map', desc: 'Conversion path visual' },
+      { id: 'FUNNEL_MAP', label: 'Conversion Map', desc: 'Conversion path visual' },
     ],
     "EXECUTION": [
       { id: 'PROPOSALS', label: 'Proposal Builder', desc: 'Strategic agreement design' },
-      { id: 'SEQUENCER', label: 'Engagement Sequence', desc: 'Multi-touch outreach' },
-      { id: 'ELEVATOR_PITCH', label: 'Pitch Generator', desc: 'Concise value scripts' },
-      { id: 'SALES_COACH', label: 'Strategic Coach', desc: 'Negotiation assistance' },
+      { id: 'SEQUENCER', label: 'Outreach Sequence', desc: 'Multi-touch engagement' },
+      { id: 'ELEVATOR_PITCH', label: 'Script Generator', desc: 'Concise value scripts' },
+      { id: 'SALES_COACH', label: 'Success Coach', desc: 'Negotiation assistance' },
     ],
     "MODELING": [
       { id: 'ROI_CALCULATOR', label: 'Value Projector', desc: 'ROI and growth modeling' },
       { id: 'DEMO_SANDBOX', label: 'Growth Simulator', desc: 'Scenario analysis' },
-      { id: 'AI_CONCIERGE', label: 'Neural Agent', desc: 'Autonomous POC demos' },
+      { id: 'AI_CONCIERGE', label: 'Customer Agent', desc: 'Autonomous engagement demos' },
     ]
   },
   ADMIN: {
@@ -168,15 +167,15 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
     ],
     "SYSTEM": [
       { id: 'SETTINGS', label: 'System Settings', desc: 'Global configuration' },
-      { id: 'SYSTEM_CONFIG', label: 'Core Config', desc: 'Technical tuning' },
+      { id: 'SYSTEM_CONFIG', label: 'Technical Config', desc: 'Performance tuning' },
       { id: 'THEME', label: 'Interface Theme', desc: 'UI aesthetic controls' },
-      { id: 'USAGE_STATS', label: 'Resource Stats', desc: 'Usage and token tracking' },
+      { id: 'USAGE_STATS', label: 'Usage Stats', desc: 'Usage and resource tracking' },
     ],
     "REPORTING": [
-        { id: 'EXPORT_DATA', label: 'Data Management', desc: 'Portability and backups' },
+        { id: 'EXPORT_DATA', label: 'Data Export', desc: 'Portability and backups' },
         { id: 'ACTIVITY_LOGS', label: 'Activity Logs', desc: 'Operational history' },
-        { id: 'TIMELINE', label: 'Project Timeline', desc: 'Workflow visualization' },
-        { id: 'NEXUS_GRAPH', label: 'Nexus Graph', desc: 'Entity relationship map' },
+        { id: 'TIMELINE', label: 'Project History', desc: 'Workflow visualization' },
+        { id: 'NEXUS_GRAPH', label: 'Entity Map', desc: 'Entity relationship map' },
         { id: 'TASK_MANAGER', label: 'Task Manager', desc: 'Operational checklists' },
     ]
   }
@@ -238,7 +237,7 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
                onClick={onSearchClick}
                className="flex items-center gap-3 px-4 h-12 rounded-2xl border text-xs font-bold transition-all bg-[#0b1021] border-slate-800 text-slate-400 hover:text-white"
             >
-               <span className="uppercase tracking-wider text-[10px]">COMMAND SEARCH</span>
+               <span className="uppercase tracking-wider text-[10px]">QUICK ACCESS</span>
                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</span>
             </button>
 
@@ -257,7 +256,7 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
                           {STRATEGIC_CITIES.map(c => <option key={c.city} value={c.city} className="text-slate-900 bg-white">{c.city}</option>)}
                        </select>
                    ) : (
-                       <span className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest leading-none w-full text-center">MARKET</span>
+                       <span className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest leading-none w-full text-center">REGION</span>
                    )}
                 </div>
             </div>
