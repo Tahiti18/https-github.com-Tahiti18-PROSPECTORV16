@@ -55,6 +55,10 @@ export interface BrandIdentity {
   mission?: string;
   logoUrl?: string;
   extractedImages?: string[];
+  manifesto?: string;
+  targetAudiencePsychology?: string;
+  competitiveGapNarrative?: string;
+  visualHierarchyAudit?: string;
 }
 
 export interface CreativeAsset {
@@ -138,7 +142,6 @@ export interface EngineResult {
   groundingSources?: Array<{ title?: string; uri?: string }>;
 }
 
-// Added missing type definitions
 export interface AssetRecord {
   id: string;
   type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
@@ -150,7 +153,6 @@ export interface AssetRecord {
   metadata?: any;
 }
 
-// Added missing type definitions
 export interface BenchmarkReport {
   entityName: string;
   missionSummary: string;
@@ -163,13 +165,11 @@ export interface BenchmarkReport {
   sources: Array<{ title: string; uri: string }>;
 }
 
-// Added missing type definitions
 export interface VeoConfig {
   aspectRatio: '16:9' | '9:16';
   resolution: '720p' | '1080p';
 }
 
-// Added missing type definitions
 export interface GeminiResult<T> {
   ok: boolean;
   text: T;

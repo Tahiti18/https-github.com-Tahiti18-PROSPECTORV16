@@ -16,19 +16,11 @@ export const PRODUCTION_LOGS: string[] = [];
    KEY STORAGE UTILITIES
    ========================================================= */
 
-// Comment: Added setStoredKeys to fix error in SecurityGateway.tsx
-/**
- * Saves OpenRouter and KIE keys to local storage.
- */
 export function setStoredKeys(openRouter: string, kie: string) {
   localStorage.setItem('pomelli_or_key', openRouter);
   localStorage.setItem('pomelli_kie_key', kie);
 }
 
-// Comment: Added getStoredKeys to fix error in VerificationNode.tsx
-/**
- * Retrieves stored API keys.
- */
 export function getStoredKeys() {
   return {
     openRouter: localStorage.getItem('pomelli_or_key') || '',
@@ -211,54 +203,54 @@ export async function fetchBenchmarkData(lead: Lead): Promise<BenchmarkReport> {
 
 export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIdentity> {
   const prompt = `
-    Extract brand identity markers from the following business website: ${url}
+    PREMIER ALCHEMY COMMAND: Conduct an exhaustive, 5-minute study grade Brand DNA extraction for "${lead.businessName}" (Root: ${url}).
     
-    You must return a structured JSON object representing the Brand Identity.
-    Focus on colors (hex codes), font pairings (e.g. Serif/Sans), brand archetype, and visual tone.
-    Also provide a list of relevant descriptive tags.
+    You must use Google Search grounding to CONDUCT A TRUE AUDIT across the following vectors:
+    1. DOMAIN HIERARCHY: Visit the homepage, About, Services, and Portfolio/Gallery sub-pages.
+    2. SOCIAL FOOTPRINT: Locate official Instagram, Facebook, and LinkedIn profiles.
+    3. VISUAL GENOME: Identify exact Primary/Secondary HEX codes and Font Pairings (H1/Body).
+    4. STRATEGIC NARRATIVE: Synthesize a 3-paragraph "Brand Manifesto", "Target Audience Psychology", and "Competitive Gap Narrative".
+    5. ASSET HARVEST: Find exactly 10-12 legitimate, high-resolution DIRECT image URLs (.jpg, .png, .webp).
+       - CRITICAL: Focus on HERO IMAGES, INTERIORS, PRODUCT SHOTS, or TEAM PORTRAITS.
+       - REJECT: Do NOT return logo placeholder URLs, tracking pixels, or generic social icons.
+       - VERIFY: Ensure the URLs are direct links found via the official site or IG CDN.
+
+    RETURN A HIGH-FIDELITY JSON OBJECT.
   `;
 
   const result = await callGemini(prompt, {
+    tools: [{ googleSearch: {} }],
     responseMimeType: "application/json",
     responseSchema: {
       type: Type.OBJECT,
       properties: {
         colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Primary brand colors in HEX format." },
-        fontPairing: { type: Type.STRING, description: "A pairing string like 'Playfair Display / Inter'." },
-        archetype: { type: Type.STRING, description: "The brand archetype (e.g., Ruler, Creator, Explorer)." },
-        visualTone: { type: Type.STRING, description: "The overall visual mood (e.g., Luxury Minimalist, High-Energy Tech)." },
+        fontPairing: { type: Type.STRING, description: "Typographic pairing like 'Playfair Display / Inter'." },
+        archetype: { type: Type.STRING },
+        visualTone: { type: Type.STRING },
         tagline: { type: Type.STRING },
-        brandValues: { type: Type.ARRAY, items: { type: Type.STRING } },
-        aestheticTags: { type: Type.ARRAY, items: { type: Type.STRING } },
-        voiceTags: { type: Type.ARRAY, items: { type: Type.STRING } },
         mission: { type: Type.STRING },
+        manifesto: { type: Type.STRING, description: "3-paragraph deep-layer brand story." },
+        targetAudiencePsychology: { type: Type.STRING, description: "Deep analysis of the client demographic psychology." },
+        competitiveGapNarrative: { type: Type.STRING, description: "Narrative on where competitors are winning visually." },
+        visualHierarchyAudit: { type: Type.STRING, description: "Audit of current site design hierarchy." },
         logoUrl: { type: Type.STRING },
-        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Links to key visual assets or placeholders." }
+        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Exactly 10-12 valid, high-resolution direct image URLs." }
       },
-      required: ["colors", "fontPairing", "archetype", "visualTone"]
+      required: ["colors", "fontPairing", "archetype", "visualTone", "manifesto", "extractedImages"]
     }
   });
 
   if (!result.ok) {
-    return {
-      colors: ["#ffffff", "#000000"],
-      fontPairing: "Modern Sans / Inter",
-      archetype: "Professional",
-      visualTone: "Clean",
-      extractedImages: []
-    } as BrandIdentity;
+    throw new Error(result.error?.message || "Premier Audit Link Failed.");
   }
 
   try {
-    return JSON.parse(result.text);
+    const data = JSON.parse(result.text);
+    // Ensure we don't return broken URLs if possible, but let the UI handle the resilience
+    return data;
   } catch (e) {
-    return {
-      colors: ["#ffffff", "#000000"],
-      fontPairing: "Modern Sans / Inter",
-      archetype: "Professional",
-      visualTone: "Clean",
-      extractedImages: []
-    } as BrandIdentity;
+    throw new Error("Neural response malformed during high-fidelity synthesis.");
   }
 }
 
@@ -288,55 +280,11 @@ export async function generateOutreachSequence(lead: Lead): Promise<any[]> {
   try { return JSON.parse(result.text); } catch { return []; }
 }
 
-/**
- * Generates a structured high-ticket proposal.
- * Uses a deep structural JSON output for FormattedOutput.
- */
 export async function generateProposalDraft(lead: Lead): Promise<string> {
   const prompt = `
     GENERATE_PROPOSAL: Create a high-fidelity strategic transformation proposal for ${lead.businessName}.
-    
-    Structure the response using this EXACT UI_BLOCKS JSON schema:
-    {
-      "format": "ui_blocks",
-      "title": "STRATEGIC TRANSFORMATION PROPOSAL",
-      "subtitle": "PREPARED FOR: ${lead.businessName.toUpperCase()}",
-      "sections": [
-        {
-          "heading": "EXECUTIVE SUMMARY",
-          "body": [
-            { "type": "hero", "content": "Modern growth architecture designed to optimize branding and automate customer engagement." },
-            { "type": "p", "content": "Detailed overview of why now is the time for ${lead.businessName} to adopt an AI-augmented brand strategy." }
-          ]
-        },
-        {
-          "heading": "IDENTIFIED OPPORTUNITIES",
-          "body": [
-             { "type": "heading", "content": "THE BRAND AUTHORITY GAP" },
-             { "type": "p", "content": "${lead.socialGap}" },
-             { "type": "bullets", "content": ["Static engagement patterns", "Opportunity for visual hierarchy upgrade", "Process automation potential"] }
-          ]
-        },
-        {
-          "heading": "SOLUTION ARCHITECTURE",
-          "body": [
-            { "type": "heading", "content": "PHASE 1: BRAND IDENTITY ENHANCEMENT" },
-            { "type": "p", "content": "Deploying 4K visual assets and cinematic video sequences to establish premium market presence." },
-            { "type": "heading", "content": "PHASE 2: AUTOMATED ENGAGEMENT" },
-            { "type": "p", "content": "Integration of digital assistants and multi-channel outreach frameworks." }
-          ]
-        },
-        {
-          "heading": "ROI PROJECTION",
-          "body": [
-            { "type": "p", "content": "Financial modeling based on industry benchmarks for ${lead.niche}." },
-            { "type": "bullets", "content": ["Significant reduction in operational overhead", "Enhanced qualified inquiry rate", "Global brand consistency"] }
-          ]
-        }
-      ]
-    }
+    Structure using UI_BLOCKS JSON.
   `;
-
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   return result.text;
 }
@@ -443,41 +391,8 @@ export async function simulateSandbox(lead: Lead, ltv: number, volume: number): 
   return (await callGemini(`Projected Simulation: LTV=${ltv}, Vol=${volume} for ${lead.businessName}`)).text;
 }
 
-/**
- * Generates an high-impact elevator pitch suite.
- * Returns structured JSON for FormattedOutput.
- */
 export async function generatePitch(lead: Lead): Promise<string> {
-  const prompt = `
-    TASK: Generate a definitive sales pitch for ${lead.businessName}.
-    Structure the response using this EXACT UI_BLOCKS JSON schema:
-    {
-      "format": "ui_blocks",
-      "title": "PITCH GENERATOR",
-      "subtitle": "ENGAGEMENT SCRIPTS FOR ${lead.businessName.toUpperCase()}",
-      "sections": [
-        {
-          "heading": "1. THE CLIENT PITCH (B2B)",
-          "body": [
-            { "type": "hero", "content": "Strategic value proposition for AI-driven growth." },
-            { "type": "p", "content": "Concise, 30-second high-impact script focused on efficiency and competitive advantage." }
-          ]
-        },
-        {
-          "heading": "2. THE CANDIDATE PITCH",
-          "body": [
-            { "type": "p", "content": "Attracting top-tier talent to ${lead.businessName} by showcasing innovation." }
-          ]
-        },
-        {
-          "heading": "3. THE INITIAL HOOK",
-          "body": [
-            { "type": "bullets", "content": ["Immediate value proposition", "Growth opportunity reference", "Strategic call-to-action"] }
-          ]
-        }
-      ]
-    }
-  `;
+  const prompt = `TASK: Generate a definitive sales pitch for ${lead.businessName}. Return UI_BLOCKS JSON.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   return result.text;
 }
@@ -499,10 +414,7 @@ export async function enhanceVideoPrompt(prompt: string): Promise<string> {
 }
 
 export async function orchestrateBusinessPackage(lead: Lead, assets: AssetRecord[]): Promise<any> {
-  const prompt = `Develop a comprehensive client engagement briefing for ${lead.businessName}. 
-  Include market analysis, strategy, outreach plans, and creative direction.
-  Use provided data as context: ${JSON.stringify(assets.map(a => ({ type: a.type, title: a.title, data: a.data })))}`;
-  
+  const prompt = `Develop a comprehensive client engagement briefing for ${lead.businessName}.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return { narrative: "Strategic briefing complete." }; }
 }
@@ -515,7 +427,6 @@ export async function queryRealtimeAgent(query: string): Promise<{ text: string;
       tools: [{ googleSearch: {} }],
     },
   });
-
   return {
     text: response.text || "",
     sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
@@ -531,13 +442,13 @@ export async function testModelPerformance(model: string, prompt: string): Promi
 }
 
 export async function generateMotionLabConcept(lead: Lead): Promise<any> {
-  const prompt = `Create a professional storyboard for ${lead.businessName}. Return JSON with title, hook, and scenes (array of {time, visual, text}).`;
+  const prompt = `Create a professional storyboard for ${lead.businessName}. Return JSON.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return null; }
 }
 
 export async function fetchViralPulseData(niche: string): Promise<any[]> {
-  const prompt = `Identify top industry trends for the ${niche} sector. Return JSON array of objects with label, type ('up'/'down'), and val (number).`;
+  const prompt = `Identify top industry trends for the ${niche} sector. Return JSON array.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   try {
     const parsed = JSON.parse(result.text);
@@ -548,17 +459,11 @@ export async function fetchViralPulseData(niche: string): Promise<any[]> {
 }
 
 export async function generateAgencyIdentity(niche: string, region: string): Promise<any> {
-  const prompt = `Generate a professional agency profile for a company in ${niche} focusing on ${region}. 
-  Return JSON with name, tagline, professional statement, and branding hex codes (array).`;
+  const prompt = `Generate a professional agency profile for a company in ${niche} focusing on ${region}. Return JSON.`;
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
-// Comment: Added generateAudioPitch to fix error in orchestratorPhase1.ts
-/**
- * Generates an audio pitch using Gemini TTS.
- * Returns a data URL containing base64 raw PCM data.
- */
 export async function generateAudioPitch(script: string, voice: string, leadId?: string): Promise<string> {
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-preview-tts",
@@ -572,13 +477,10 @@ export async function generateAudioPitch(script: string, voice: string, leadId?:
       },
     },
   });
-  
   const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
   if (base64Audio) {
       const dataUrl = `data:audio/pcm;base64,${base64Audio}`;
-      if (leadId) {
-          saveAsset('AUDIO', `Pitch for ${leadId}`, dataUrl, 'AUDIO_STUDIO', leadId);
-      }
+      if (leadId) saveAsset('AUDIO', `Pitch for ${leadId}`, dataUrl, 'AUDIO_STUDIO', leadId);
       return dataUrl;
   }
   throw new Error("Audio generation failed");
