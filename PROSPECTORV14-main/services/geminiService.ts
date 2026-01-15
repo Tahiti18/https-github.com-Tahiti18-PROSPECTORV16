@@ -210,9 +210,56 @@ export async function fetchBenchmarkData(lead: Lead): Promise<BenchmarkReport> {
 }
 
 export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIdentity> {
-  const prompt = `Extract identity markers from ${url}.`;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
-  try { return JSON.parse(result.text); } catch { return {} as BrandIdentity; }
+  const prompt = `
+    Extract brand identity markers from the following business website: ${url}
+    
+    You must return a structured JSON object representing the Brand Identity.
+    Focus on colors (hex codes), font pairings (e.g. Serif/Sans), brand archetype, and visual tone.
+    Also provide a list of relevant descriptive tags.
+  `;
+
+  const result = await callGemini(prompt, {
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Primary brand colors in HEX format." },
+        fontPairing: { type: Type.STRING, description: "A pairing string like 'Playfair Display / Inter'." },
+        archetype: { type: Type.STRING, description: "The brand archetype (e.g., Ruler, Creator, Explorer)." },
+        visualTone: { type: Type.STRING, description: "The overall visual mood (e.g., Luxury Minimalist, High-Energy Tech)." },
+        tagline: { type: Type.STRING },
+        brandValues: { type: Type.ARRAY, items: { type: Type.STRING } },
+        aestheticTags: { type: Type.ARRAY, items: { type: Type.STRING } },
+        voiceTags: { type: Type.ARRAY, items: { type: Type.STRING } },
+        mission: { type: Type.STRING },
+        logoUrl: { type: Type.STRING },
+        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Links to key visual assets or placeholders." }
+      },
+      required: ["colors", "fontPairing", "archetype", "visualTone"]
+    }
+  });
+
+  if (!result.ok) {
+    return {
+      colors: ["#ffffff", "#000000"],
+      fontPairing: "Modern Sans / Inter",
+      archetype: "Professional",
+      visualTone: "Clean",
+      extractedImages: []
+    } as BrandIdentity;
+  }
+
+  try {
+    return JSON.parse(result.text);
+  } catch (e) {
+    return {
+      colors: ["#ffffff", "#000000"],
+      fontPairing: "Modern Sans / Inter",
+      archetype: "Professional",
+      visualTone: "Clean",
+      extractedImages: []
+    } as BrandIdentity;
+  }
 }
 
 export async function generateVisual(prompt: string, lead: Lead, sourceImage?: string): Promise<string | undefined> {
