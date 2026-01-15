@@ -65,9 +65,7 @@ const App: React.FC = () => {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    const unsubDb = db.subscribe((newLeads) => { 
-      setLeads([...newLeads]); 
-    });
+    const unsubDb = db.subscribe((newLeads) => { setLeads([...newLeads]); });
     setIsHydrated(true);
     return () => unsubDb();
   }, []);
