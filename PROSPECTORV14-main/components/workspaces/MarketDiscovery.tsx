@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Lead } from '../../types';
 import { generateLeads } from '../../services/geminiService';
@@ -41,11 +40,11 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
         assetGrade: l.assetGrade || 'A'
       }));
 
-      // Merging new findings into database with deduplication logic
-      const mergedLeads = db.upsertLeads(formatted);
+      // Merging new findings into permanent database with deduplication logic
+      db.upsertLeads(formatted);
       
       onLeadsGenerated(formatted);
-      toast.success(`${formatted.length} Businesses identified and synchronized with Ledger.`);
+      toast.success(`${formatted.length} Targets synchronized with the permanent ledger.`);
     } catch (e: any) {
       console.error(e);
       toast.error(`Discovery Interrupted: ${e.message}`);
@@ -56,6 +55,10 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
 
   const handleExport = () => {
     const leads = db.getLeads();
+    if (leads.length === 0) {
+      toast.info("Ledger is empty. No data to export.");
+      return;
+    }
     const dataStr = JSON.stringify(leads, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -77,8 +80,8 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
         try {
             const imported = JSON.parse(ev.target?.result as string);
             if (Array.isArray(imported)) {
-                db.saveLeads(imported);
-                toast.success(`IMPORTED ${imported.length} RECORDS`);
+                db.upsertLeads(imported);
+                toast.success(`IMPORTED AND SYNCHRONIZED ${imported.length} RECORDS`);
             } else {
                 toast.error("INVALID_FILE_STRUCTURE");
             }
@@ -88,12 +91,6 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleManualCommit = () => {
-    const currentLeads = db.getLeads();
-    db.saveLeads(currentLeads);
-    toast.success("DATABASE SYNCHRONIZED AND PERSISTED");
   };
 
   if (loading) return <div className="py-20"><Loader /></div>;
@@ -160,12 +157,10 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
             </button>
          </div>
 
-         <button 
-            onClick={handleManualCommit}
-            className="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-emerald-600/20 active:scale-95 border-b-4 border-emerald-800 flex items-center gap-3"
-         >
-            <span>💾</span> COMMIT ALL CHANGES
-         </button>
+         <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">LOCAL_PERSISTENCE_ACTIVE</span>
+         </div>
       </div>
     </div>
   );
