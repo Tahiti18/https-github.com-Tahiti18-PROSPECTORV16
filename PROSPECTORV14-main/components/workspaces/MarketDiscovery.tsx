@@ -43,6 +43,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
   const [isCustomNiche, setIsCustomNiche] = useState(false);
   const [nicheExpanded, setNicheExpanded] = useState(false);
   const [volume, setVolume] = useState(6);
+  const [isCustomVolume, setIsCustomVolume] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nicheRef = useRef<HTMLDivElement>(null);
@@ -144,6 +145,20 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
     setNicheExpanded(false);
   };
 
+  const handleVolumePreset = (val: number) => {
+    setVolume(val);
+    setIsCustomVolume(false);
+  };
+
+  const handleCustomVolumeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value);
+    if (!isNaN(val)) {
+        setVolume(Math.min(50, Math.max(1, val))); // Cap at 50 for API stability
+    } else {
+        setVolume(0);
+    }
+  };
+
   if (loading) return <div className="py-20"><Loader /></div>;
 
   return (
@@ -217,7 +232,7 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
                     {STRATEGIC_CLUSTERS.map((cluster) => (
                       <div key={cluster.category} className="space-y-1">
                         <div className="px-5 py-2">
-                           <h4 className="text-[9px] font-black text-emerald-500/40 uppercase tracking-[0.3em] border-b border-emerald-500/10 pb-1">{cluster.category}</h4>
+                           <h4 className="text-[12px] font-black text-emerald-500/60 uppercase tracking-[0.35em] border-b border-emerald-500/10 pb-1.5">{cluster.category}</h4>
                         </div>
                         {cluster.niches.map(n => (
                           <button
@@ -240,15 +255,37 @@ export const MarketDiscovery: React.FC<MarketDiscoveryProps> = ({ market, onLead
           <div className="space-y-4">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] ml-1">SAMPLE SIZE</label>
             <div className="flex gap-3">
-              {[6, 12, 18, 30].map(v => (
+              {[6, 12, 18].map(v => (
                 <button 
                   key={v} 
-                  onClick={() => setVolume(v)} 
-                  className={`flex-1 py-5 rounded-2xl text-[11px] font-black border-2 transition-all active:scale-95 ${volume === v ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-[#020617] border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                  onClick={() => handleVolumePreset(v)} 
+                  className={`flex-1 py-5 rounded-2xl text-[11px] font-black border-2 transition-all active:scale-95 ${!isCustomVolume && volume === v ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-[#020617] border-slate-800 text-slate-500 hover:border-slate-600'}`}
                 >
                   {v}
                 </button>
               ))}
+              
+              {/* CUSTOM VOLUME SLOT */}
+              <div className="flex-1">
+                {isCustomVolume ? (
+                    <input 
+                        type="number"
+                        autoFocus
+                        value={volume || ''}
+                        onChange={handleCustomVolumeInput}
+                        onBlur={() => volume === 0 && setIsCustomVolume(false)}
+                        className="w-full h-full bg-[#020617] border-2 border-emerald-500 rounded-2xl text-center text-[11px] font-black text-emerald-400 focus:outline-none shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                        placeholder="--"
+                    />
+                ) : (
+                    <button 
+                        onClick={() => setIsCustomVolume(true)}
+                        className={`w-full py-5 rounded-2xl text-[11px] font-black border-2 transition-all active:scale-95 ${isCustomVolume ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-600/20' : 'bg-[#020617] border-slate-800 text-slate-500 hover:border-slate-600 hover:text-emerald-400/80'}`}
+                    >
+                        CUSTOM
+                    </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
