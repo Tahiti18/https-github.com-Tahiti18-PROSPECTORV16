@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MainMode, SubModule } from '../types';
 import { Tooltip } from './Tooltip';
@@ -25,27 +26,7 @@ const STRATEGIC_CITIES = [
   { rank: 7, city: "SYDNEY, AUS" },
   { rank: 8, city: "SAN FRANCISCO, USA" },
   { rank: 9, city: "TORONTO, CAN" },
-  { rank: 10, city: "LOS ANGELES, USA" },
-  { rank: 11, city: "CHICAGO, USA" },
-  { rank: 12, city: "DALLAS, USA" },
-  { rank: 13, city: "HOUSTON, USA" },
-  { rank: 14, city: "LAS VEGAS, USA" },
-  { rank: 15, city: "ATLANTA, USA" },
-  { rank: 16, city: "SEATTLE, USA" },
-  { rank: 17, city: "BOSTON, USA" },
-  { rank: 18, city: "PHOENIX, USA" },
-  { rank: 19, city: "SAN DIEGO, USA" },
-  { rank: 20, city: "DENVER, USA" },
-  { rank: 21, city: "MANCHESTER, UK" },
-  { rank: 22, city: "BIRMINGHAM, UK" },
-  { rank: 23, city: "MELBOURNE, AUS" },
-  { rank: 24, city: "BRISBANE, AUS" },
-  { rank: 25, city: "VANCOUVER, CAN" },
-  { rank: 26, city: "CALGARY, CAN" },
-  { rank: 27, city: "DUBLIN, IRE" },
-  { rank: 28, city: "HONG KONG" },
-  { rank: 29, city: "TOKYO, JPN" },
-  { rank: 30, city: "PARIS, FRA" }
+  { rank: 10, city: "LOS ANGELES, USA" }
 ];
 
 const ModeIcon = ({ id, active }: { id: MainMode, active: boolean }) => {
@@ -116,22 +97,22 @@ const SubModuleIcon = ({ id, active }: { id: SubModule; active: boolean }) => {
 
 const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: string; desc: string }[]>> = {
   RESEARCH: {
-    "CORE INSIGHTS": [
+    "CORE INTELLIGENCE": [
       { id: 'EXECUTIVE_DASHBOARD', label: 'Executive Dashboard', desc: 'Main operational overview' },
-      { id: 'TRANSFORMATION_BLUEPRINT', label: 'System Overview', desc: 'Full-scale marketing blueprint' },
-      { id: 'USER_GUIDE', label: 'System Manual', desc: 'Exhaustive feature directory' },
-      { id: 'MARKET_DISCOVERY', label: 'Generate Leads', desc: 'Locate high-value prospects' },
-      { id: 'AUTOMATED_SEARCH', label: 'Intelligence Scan', desc: 'Autonomous lead identification' },
+      { id: 'TRANSFORMATION_BLUEPRINT', label: 'Capability Matrix', desc: 'Full-scale marketing blueprint' },
+      { id: 'USER_GUIDE', label: 'User Guide', desc: 'Exhaustive feature directory' },
+      { id: 'MARKET_DISCOVERY', label: 'Lead Discovery', desc: 'Locate high-value prospects' },
+      { id: 'AUTOMATED_SEARCH', label: 'Automated Search', desc: 'Autonomous lead identification' },
       { id: 'MARKET_TRENDS', label: 'Market Trends', desc: 'Real-time industry insights' },
     ],
     "CRM & STRATEGY": [
-      { id: 'PROSPECT_DATABASE', label: 'Lead Database', desc: 'Master contact database' },
+      { id: 'PROSPECT_DATABASE', label: 'Prospect Database', desc: 'Master contact ledger' },
       { id: 'STRATEGY_CENTER', label: 'Strategy Hub', desc: 'Deep-dive business audits' },
       { id: 'PIPELINE', label: 'Growth Pipeline', desc: 'Opportunity lifecycle tracking' },
       { id: 'ANALYTICS_HUB', label: 'Business Analytics', desc: 'Aggregate performance data' },
     ],
-    "ANALYSIS CENTER": [
-      { id: 'BENCHMARK', label: 'Benchmarking', desc: 'Cross-industry comparison' },
+    "ANALYSIS TOOLS": [
+      { id: 'BENCHMARK', label: 'Benchmark Analysis', desc: 'Cross-industry comparison' },
       { id: 'VISUAL_ANALYSIS', label: 'Visual Audit', desc: 'Website and asset review' },
       { id: 'STRATEGIC_REASONING', label: 'Strategic Logic', desc: 'Advanced problem solving' },
     ]
@@ -139,43 +120,43 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
   DESIGN: {
     "BRAND STUDIO": [
       { id: 'VISUAL_STUDIO', label: 'Visual Studio', desc: 'Identity asset generation' },
-      { id: 'BRAND_DNA', label: 'Brand Identity', desc: 'Core style extraction' },
-      { id: 'MOCKUPS_4K', label: 'Mockup Studio', desc: 'Commercial visualization' },
+      { id: 'BRAND_DNA', label: 'Brand DNA', desc: 'Core style extraction' },
+      { id: 'MOCKUPS_4K', label: 'High-Res Mockups', desc: 'Commercial visualization' },
     ],
     "ASSETS": [
       { id: 'PRODUCT_SYNTHESIS', label: 'Offer Synthesis', desc: 'Solution architecture' },
-      { id: 'CONTENT_IDEATION', label: 'Creative Briefs', desc: 'Campaign concept hooks' },
+      { id: 'CONTENT_IDEATION', label: 'Content Ideation', desc: 'Campaign concept hooks' },
       { id: 'ASSET_LIBRARY', label: 'Asset Library', desc: 'Central media repository' },
     ]
   },
   MEDIA: {
-    "MEDIA PRODUCTION": [
+    "VIDEO PRODUCTION": [
       { id: 'VIDEO_PRODUCTION', label: 'Video Studio', desc: 'Cinematic ad synthesis' },
-      { id: 'VIDEO_AUDIT', label: 'Content Review', desc: 'Digital presence review' },
-      { id: 'VIDEO_INSIGHTS', label: 'Media Analytics', desc: 'Content performance analysis' },
-      { id: 'MOTION_LAB', label: 'Storyboard Studio', desc: 'Dynamic visual architecture' },
+      { id: 'VIDEO_AUDIT', label: 'Video Audit', desc: 'Digital presence review' },
+      { id: 'VIDEO_INSIGHTS', label: 'Media Insights', desc: 'Content performance analysis' },
+      { id: 'MOTION_LAB', label: 'Motion Lab', desc: 'Dynamic storyboard architecture' },
     ],
     "AUDIO": [
       { id: 'SONIC_STUDIO', label: 'Sonic Studio', desc: 'Voice and music engineering' },
-      { id: 'MEETING_NOTES', label: 'Project Scribe', desc: 'Meeting summary and tasks' },
+      { id: 'MEETING_NOTES', label: 'Executive Scribe', desc: 'Meeting summary and tasks' },
     ]
   },
   OUTREACH: {
     "CAMPAIGN": [
-      { id: 'CAMPAIGN_ORCHESTRATOR', label: 'Campaign Engine', desc: 'End-to-end deployment' },
+      { id: 'CAMPAIGN_ORCHESTRATOR', label: 'Campaign Architect', desc: 'End-to-end deployment' },
       { id: 'PRESENTATION_BUILDER', label: 'Deck Architect', desc: 'Presentation design' },
-      { id: 'FUNNEL_MAP', label: 'Conversion Map', desc: 'Conversion path visual' },
+      { id: 'FUNNEL_MAP', label: 'Funnel Map', desc: 'Conversion path visual' },
     ],
     "EXECUTION": [
       { id: 'PROPOSALS', label: 'Proposal Builder', desc: 'Strategic agreement design' },
-      { id: 'SEQUENCER', label: 'Outreach Sequence', desc: 'Multi-touch engagement' },
-      { id: 'ELEVATOR_PITCH', label: 'Script Generator', desc: 'Concise value scripts' },
-      { id: 'SALES_COACH', label: 'Success Coach', desc: 'Negotiation assistance' },
+      { id: 'SEQUENCER', label: 'Engagement Sequence', desc: 'Multi-touch outreach' },
+      { id: 'ELEVATOR_PITCH', label: 'Pitch Generator', desc: 'Concise value scripts' },
+      { id: 'SALES_COACH', label: 'Strategic Coach', desc: 'Negotiation assistance' },
     ],
     "MODELING": [
       { id: 'ROI_CALCULATOR', label: 'Value Projector', desc: 'ROI and growth modeling' },
       { id: 'DEMO_SANDBOX', label: 'Growth Simulator', desc: 'Scenario analysis' },
-      { id: 'AI_CONCIERGE', label: 'Customer Agent', desc: 'Autonomous engagement demos' },
+      { id: 'AI_CONCIERGE', label: 'Neural Agent', desc: 'Autonomous POC demos' },
     ]
   },
   ADMIN: {
@@ -183,19 +164,19 @@ const MODULE_GROUPS: Record<MainMode, Record<string, { id: SubModule; label: str
       { id: 'AGENCY_PLAYBOOK', label: 'Agency Playbook', desc: 'Operational SOPs' },
       { id: 'IDENTITY', label: 'Agency Profile', desc: 'Workspace branding' },
       { id: 'BILLING', label: 'Financials', desc: 'Resource management' },
-      { id: 'AFFILIATE', label: 'Partners', desc: 'Growth network network management' },
+      { id: 'AFFILIATE', label: 'Partners', desc: 'Growth network management' },
     ],
     "SYSTEM": [
       { id: 'SETTINGS', label: 'System Settings', desc: 'Global configuration' },
-      { id: 'SYSTEM_CONFIG', label: 'Technical Config', desc: 'Performance tuning' },
+      { id: 'SYSTEM_CONFIG', label: 'Core Config', desc: 'Technical tuning' },
       { id: 'THEME', label: 'Interface Theme', desc: 'UI aesthetic controls' },
-      { id: 'USAGE_STATS', label: 'Usage Stats', desc: 'Usage and resource tracking' },
+      { id: 'USAGE_STATS', label: 'Resource Stats', desc: 'Usage and token tracking' },
     ],
     "REPORTING": [
-        { id: 'EXPORT_DATA', label: 'Data Export', desc: 'Portability and backups' },
+        { id: 'EXPORT_DATA', label: 'Data Management', desc: 'Portability and backups' },
         { id: 'ACTIVITY_LOGS', label: 'Activity Logs', desc: 'Operational history' },
-        { id: 'TIMELINE', label: 'Project History', desc: 'Workflow visualization' },
-        { id: 'NEXUS_GRAPH', label: 'Entity Map', desc: 'Entity relationship map' },
+        { id: 'TIMELINE', label: 'Project Timeline', desc: 'Workflow visualization' },
+        { id: 'NEXUS_GRAPH', label: 'Nexus Graph', desc: 'Entity relationship map' },
         { id: 'TASK_MANAGER', label: 'Task Manager', desc: 'Operational checklists' },
     ]
   }
@@ -206,20 +187,7 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
 }) => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [marketExpanded, setMarketExpanded] = useState(false);
-  const [isCustomMode, setIsCustomMode] = useState(false);
   const marketRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (marketRef.current && !marketRef.current.contains(event.target as Node)) {
-        setMarketExpanded(false);
-        if (!isCustomMode) setIsCustomMode(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCustomMode]);
 
   const groups = MODULE_GROUPS[activeMode];
 
@@ -231,16 +199,6 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
       case 'MEDIA': setActiveModule('VIDEO_PRODUCTION'); break;
       case 'OUTREACH': setActiveModule('CAMPAIGN_ORCHESTRATOR'); break;
       case 'ADMIN': setActiveModule('AGENCY_PLAYBOOK'); break;
-    }
-  };
-
-  const handleRegionSelect = (val: string) => {
-    if (val === 'CUSTOM_OVERRIDE') {
-      setIsCustomMode(true);
-    } else {
-      setTheater(val);
-      setIsCustomMode(false);
-      setMarketExpanded(false);
     }
   };
 
@@ -280,79 +238,28 @@ export const LayoutZenith: React.FC<LayoutProps> = ({
                onClick={onSearchClick}
                className="flex items-center gap-3 px-4 h-12 rounded-2xl border text-xs font-bold transition-all bg-[#0b1021] border-slate-800 text-slate-400 hover:text-white"
             >
-               <span className="uppercase tracking-wider text-[10px]">QUICK ACCESS</span>
+               <span className="uppercase tracking-wider text-[10px]">COMMAND SEARCH</span>
                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-800 text-slate-500">⌘K</span>
             </button>
 
-            <div ref={marketRef} className="relative">
-                {/* --- CUSTOM SELECT TRIGGER --- */}
+            <div ref={marketRef} className={`relative transition-all duration-300 ${marketExpanded ? 'w-64' : 'w-[120px]'}`}>
                 <div
-                   onClick={() => !marketExpanded && setMarketExpanded(true)}
-                   className={`flex items-center gap-3 px-6 h-12 rounded-full border-2 cursor-pointer transition-all duration-300 group shadow-lg ${marketExpanded ? 'w-64 border-emerald-500 bg-[#05091a]' : 'w-44 border-slate-800 bg-[#0b1021] hover:border-emerald-500/50'}`}
+                   onClick={() => setMarketExpanded(true)}
+                   className="flex items-center gap-3 px-4 h-12 rounded-full border cursor-pointer bg-[#0b1021] border-slate-800 hover:border-emerald-500/50 overflow-hidden"
                 >
-                   {marketExpanded && isCustomMode ? (
-                      <div className="flex items-center w-full animate-in fade-in duration-300">
-                         <input
-                            autoFocus
-                            placeholder="LOCATION..."
-                            className="bg-transparent text-[11px] font-black uppercase focus:outline-none w-full text-emerald-400 placeholder-slate-700 tracking-widest"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                setMarketExpanded(false);
-                                setIsCustomMode(false);
-                              }
-                              if (e.key === 'Escape') {
-                                setIsCustomMode(false);
-                                setMarketExpanded(false);
-                              }
-                            }}
-                            onChange={(e) => setTheater(e.target.value.toUpperCase())}
-                            value={theater}
-                         />
-                      </div>
+                   {marketExpanded ? (
+                       <select
+                          autoFocus
+                          value={theater}
+                          onChange={(e) => { setTheater(e.target.value); setMarketExpanded(false); }}
+                          className="bg-transparent text-xs font-bold uppercase focus:outline-none w-full text-white"
+                       >
+                          {STRATEGIC_CITIES.map(c => <option key={c.city} value={c.city} className="text-slate-900 bg-white">{c.city}</option>)}
+                       </select>
                    ) : (
-                      <div className="flex items-center justify-between w-full">
-                         <div className="flex flex-col">
-                            <span className="text-[7px] font-black text-slate-600 uppercase tracking-[0.3em] leading-none mb-0.5">THEATER</span>
-                            <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] leading-none truncate max-w-[120px]">
-                              {theater || 'SELECT...'}
-                            </span>
-                         </div>
-                         <svg className={`w-3 h-3 text-emerald-500 transition-transform duration-300 ${marketExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M19 9l-7 7-7-7" /></svg>
-                      </div>
+                       <span className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest leading-none w-full text-center">MARKET</span>
                    )}
                 </div>
-
-                {/* --- CUSTOM DROPDOWN MENU --- */}
-                {marketExpanded && !isCustomMode && (
-                   <div className="absolute top-14 right-0 w-64 bg-[#0b1021]/95 backdrop-blur-2xl border-2 border-slate-800 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden z-[200] animate-in zoom-in-95 fade-in duration-200">
-                      <div className="p-2 border-b border-slate-800 bg-emerald-500/5">
-                         <button 
-                            onClick={() => handleRegionSelect('CUSTOM_OVERRIDE')}
-                            className="w-full text-left px-4 py-3 rounded-xl hover:bg-emerald-600 group transition-all flex items-center justify-between"
-                         >
-                            <span className="text-[10px] font-black text-emerald-400 group-hover:text-white uppercase tracking-widest italic">CUSTOM LOCATION...</span>
-                            <span className="text-xs opacity-40 group-hover:opacity-100">✏️</span>
-                         </button>
-                      </div>
-                      <div className="max-h-80 overflow-y-auto custom-scrollbar p-2 space-y-1">
-                         {STRATEGIC_CITIES.map((c) => (
-                            <button
-                               key={c.city}
-                               onClick={() => handleRegionSelect(c.city)}
-                               className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${theater === c.city ? 'bg-emerald-600 shadow-lg' : 'hover:bg-slate-800'}`}
-                            >
-                               <div className="flex flex-col">
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${theater === c.city ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>{c.city}</span>
-                               </div>
-                               {theater === c.city && (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                               )}
-                            </button>
-                         ))}
-                      </div>
-                   </div>
-                )}
             </div>
          </div>
       </header>

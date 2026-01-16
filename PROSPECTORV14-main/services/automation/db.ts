@@ -1,9 +1,10 @@
+
 import { AutomationRun, isAutomationRun } from './types';
 import { Lead } from '../../types';
 import { toast } from '../toastManager';
 
 const DB_KEY = 'pomelli_automation_db_v1';
-const STORAGE_KEY_LEADS = 'prospector_os_ledger_v14'; 
+const STORAGE_KEY_LEADS = 'pomelli_os_leads_v14_final';
 const MUTEX_KEY = 'pomelli_automation_mutex_v1';
 
 type DbV1 = { version: 1; runs: Record<string, AutomationRun> };
@@ -37,15 +38,7 @@ function writeDb(db: DbV1) {
   } catch (e: any) {
     console.error("[AutoDB] Write failed", e);
     if (e.name === 'QuotaExceededError' || e.code === 22) {
-      toast.error("STORAGE FULL: Pruning automation history.");
-      // Delete old runs
-      const ids = Object.keys(db.runs).sort((a, b) => db.runs[b].createdAt - db.runs[a].createdAt);
-      const reducedRuns = ids.slice(0, 10).reduce((acc, id) => {
-        acc[id] = db.runs[id];
-        return acc;
-      }, {} as Record<string, AutomationRun>);
-      db.runs = reducedRuns;
-      localStorage.setItem(DB_KEY, JSON.stringify(db));
+      toast.error("STORAGE FULL: Cannot save automation run.");
     }
   }
 }
@@ -102,6 +95,7 @@ export const db = {
 
   subscribe: (listener: Listener) => {
     listeners.add(listener);
+    // Immediately emit current state to new subscriber
     listener(db.getLeads());
     return () => { listeners.delete(listener); };
   },
@@ -113,45 +107,38 @@ export const db = {
   },
 
   saveLeads: (leads: Lead[]) => {
-    if (!leads || !Array.isArray(leads)) return;
-
-    // Compact records before saving
-    const compacted = leads.map(l => ({
-        ...l,
-        outreachHistory: l.outreachHistory?.slice(0, 10), // Limit history per lead
-        campaigns: undefined // Strip bulky campaign objects
-    }));
-
+    if (!leads || !Array.isArray(leads)) {
+      console.warn("Attempted to save invalid leads array to DB.");
+      return;
+    }
     try {
-        localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(compacted));
-        listeners.forEach(l => l([...compacted]));
+        localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(leads));
+        // Broadcast to all active listeners (App.tsx state)
+        listeners.forEach(l => l([...leads]));
+        console.log(`[Persistence] ${leads.length} records committed to local storage.`);
     } catch (e: any) {
+        console.error("Save Leads Failed", e);
         if (e.name === 'QuotaExceededError') {
-            toast.error("LEDGER FULL: Auto-pruning database.");
-            const halved = compacted.slice(0, Math.floor(compacted.length / 2));
-            localStorage.setItem(STORAGE_KEY_LEADS, JSON.stringify(halved));
-            listeners.forEach(l => l([...halved]));
+            toast.error("STORAGE FULL: Export data to free up space.");
         }
     }
   },
 
   upsertLeads: (newLeads: Lead[]) => {
     const current = db.getLeads();
-    const currentMap = new Map<string, Lead>(current.map(l => [l.id, l]));
+    const currentMap = new Map(current.map(l => [l.id, l]));
     
     newLeads.forEach(nl => {
+      // Use businessName + website as a secondary key if ID is generic
       const existing = current.find(e => 
         e.id === nl.id || 
-        (e.businessName.toLowerCase() === nl.businessName.toLowerCase() && 
-         e.websiteUrl.toLowerCase() === nl.websiteUrl.toLowerCase())
+        (e.businessName === nl.businessName && e.websiteUrl === nl.websiteUrl)
       );
 
       if (existing) {
-        const updated = { ...existing, ...nl, id: existing.id };
-        currentMap.set(existing.id, updated);
+        currentMap.set(existing.id, { ...existing, ...nl, id: existing.id });
       } else {
-        const id = nl.id || `L-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-        currentMap.set(id, { ...nl, id });
+        currentMap.set(nl.id, nl);
       }
     });
 
@@ -187,7 +174,7 @@ export const db = {
     const leads = db.getLeads();
     const cleaned = leads.map(l => ({ ...l, locked: false, lockedByRunId: undefined }));
     db.saveLeads(cleaned);
-    toast.success(`SYSTEM OVERRIDE: Ledger Unlocked.`);
+    toast.success(`SYSTEM OVERRIDE: ${leads.length} TARGETS UNLOCKED.`);
   },
 
   getRun: (id: string): AutomationRun | null => {
@@ -209,6 +196,6 @@ export const db = {
   clearRunsDB: () => {
     localStorage.removeItem(DB_KEY);
     localStorage.removeItem(MUTEX_KEY);
-    toast.success("Automation data purged.");
+    toast.success("Automation Database Cleared.");
   }
 };

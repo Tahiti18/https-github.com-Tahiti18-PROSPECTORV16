@@ -80,8 +80,7 @@ export default function MediaVault() {
           <div key={type} style={{ marginBottom: 18 }}>
             <h3 style={{ margin: '10px 0' }}>{type}</h3>
             <div style={{ display: 'grid', gap: 10 }}>
-              {/* Comment: Explicitly cast list to AssetRecord[] to fix "Property 'map' does not exist on type 'unknown'" */}
-              {(list as AssetRecord[]).map((a) => (
+              {list.map((a) => (
                 <div
                   key={a.id}
                   style={{

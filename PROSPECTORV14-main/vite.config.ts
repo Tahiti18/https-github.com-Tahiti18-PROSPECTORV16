@@ -151,8 +151,7 @@ const createOpenRouterMiddleware = (env: Record<string, string>) => {
 };
 
 export default defineConfig(({ mode }) => {
-  // Comment: Casting process to any to access cwd() method which may be missing from the build environment's Process type
-  const env = loadEnv(mode, (process as any).cwd(), '');
+  const env = loadEnv(mode, process.cwd(), '');
 
   // Ensure middleware can see env at runtime (Railway)
   for (const [k, v] of Object.entries(env)) {

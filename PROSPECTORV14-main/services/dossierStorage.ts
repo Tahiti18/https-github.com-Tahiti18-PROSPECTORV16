@@ -1,3 +1,4 @@
+
 import { Lead } from '../types';
 
 export interface StrategicDossier {
@@ -14,7 +15,6 @@ export interface StrategicDossier {
 }
 
 const STORAGE_KEY = 'pomelli_dossier_db_v1';
-const MAX_DOSSIERS = 15; // Hard limit to prevent storage bloat
 
 const getDb = (): StrategicDossier[] => {
   try {
@@ -26,15 +26,7 @@ const getDb = (): StrategicDossier[] => {
 };
 
 const saveDb = (db: StrategicDossier[]) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  } catch (e: any) {
-    if (e.name === 'QuotaExceededError') {
-      // If full, keep only the top 5 and try again
-      console.warn("Dossier Storage Full. Emergency purge in progress.");
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(db.slice(0, 5)));
-    }
-  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
 };
 
 export const dossierStorage = {
@@ -59,11 +51,9 @@ export const dossierStorage = {
     };
 
     db.unshift(dossier);
+    if (db.length > 50) db.pop();
     
-    // Enforce hard record cap to keep byte count low
-    const cappedDb = db.slice(0, MAX_DOSSIERS);
-    
-    saveDb(cappedDb);
+    saveDb(db);
     return dossier;
   },
 

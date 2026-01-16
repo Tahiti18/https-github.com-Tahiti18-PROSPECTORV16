@@ -1,94 +1,29 @@
-
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Lead, BrandIdentity, MainMode, SubModule } from '../../types';
-import { extractBrandDNA, saveAsset, subscribeToAssets, AssetRecord } from '../../services/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { Lead, CreativeAsset, Campaign, BrandIdentity } from '../../types';
+import { extractBrandDNA, generateVisual, saveAsset, generateVideoPayload, loggedGenerateContent } from '../../services/geminiService';
 import { toast } from '../../services/toastManager';
 
 interface BrandDNAProps {
   lead?: Lead;
   onUpdateLead?: (id: string, updates: Partial<Lead>) => void;
-  onNavigate?: (mode: MainMode, mod: SubModule) => void;
 }
 
-// Resilient Image Component with intelligent loading and fallback
-const BrandImage: React.FC<{ src: string; fallback?: string }> = ({ src, fallback }) => {
-    const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
-    const [currentSrc, setCurrentSrc] = useState(src);
-    
-    useEffect(() => {
-        if (src.startsWith('data:')) setStatus('success');
-    }, [src]);
+// UI Modes matching the Pomelli flow
+type ViewMode = 'IDLE' | 'SCANNING' | 'DASHBOARD' | 'STRATEGY_SELECT' | 'CAMPAIGN' | 'EDITOR';
 
-    const handleError = () => {
-        if (fallback && currentSrc !== fallback) {
-            setCurrentSrc(fallback);
-            setStatus('loading');
-        } else {
-            setStatus('error');
-        }
-    };
+interface CampaignConcept {
+  id: string;
+  title: string;
+  hook: string;
+  visualDirection: string;
+}
 
-    return (
-        <div className={`aspect-[4/5] bg-[#1a1a1a] rounded-[24px] overflow-hidden relative group border-2 border-slate-800/50 hover:border-emerald-500/50 transition-all cursor-pointer ${status === 'loading' ? 'animate-pulse' : ''}`}>
-            {status === 'error' ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/50 p-4 text-center">
-                    <span className="text-2xl mb-2 opacity-20">🖼️</span>
-                    <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest leading-tight">MEDIA_LINK_UNRELIABLE</span>
-                </div>
-            ) : (
-                <img 
-                    src={currentSrc} 
-                    onLoad={() => setStatus('success')}
-                    onError={handleError}
-                    className={`w-full h-full object-cover transition-all duration-700 ${status === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`} 
-                    alt="Extracted Asset"
-                />
-            )}
-            
-            {status === 'loading' && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                </div>
-            )}
-            
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        </div>
-    );
-};
-
-// HELPER: NEURAL ALCHEMY COMPRESSION (Resizes large iPad images to save storage)
-const compressImage = (dataUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200; 
-            let width = img.width;
-            let height = img.height;
-
-            if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.85)); 
-        };
-        img.src = dataUrl;
-    });
-};
-
-type ViewMode = 'INTRO' | 'IDLE' | 'SCANNING' | 'DASHBOARD';
-
-export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNavigate }) => {
-  const [view, setView] = useState<ViewMode>('INTRO');
+export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead }) => {
+  // --- STATE ---
+  const [view, setView] = useState<ViewMode>('IDLE');
   const [targetUrl, setTargetUrl] = useState(lead?.websiteUrl || '');
-  const [progress, setProgress] = useState(0);
-  const [globalAssets, setGlobalAssets] = useState<AssetRecord[]>([]);
   
+  // Data State
   const [adHocLead, setAdHocLead] = useState<Partial<Lead>>({
     id: 'temp-adhoc',
     businessName: 'TARGET BRAND',
@@ -99,50 +34,38 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
   const activeEntity = lead || adHocLead as Lead;
   const activeIdentity = activeEntity.brandIdentity;
 
+  // Flow State
+  const [concepts, setConcepts] = useState<CampaignConcept[]>([]);
+  const [selectedConcept, setSelectedConcept] = useState<CampaignConcept | null>(null);
+  const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
+  
+  // Loading States
   const [scanStep, setScanStep] = useState(0);
-  const extractionPromiseRef = useRef<Promise<BrandIdentity> | null>(null);
-  const manualUploadRef = useRef<HTMLInputElement>(null);
-
-  // Unified Asset Feed: Deduplicate scraped images and manual uploads for this specific lead
-  const unifiedAssets = useMemo(() => {
-    const scraped = activeIdentity?.extractedImages || [];
-    const manual = globalAssets
-        .filter(a => a.type === 'IMAGE' && a.leadId === activeEntity.id)
-        .map(a => a.data);
-    
-    // Create unique set to prevent "Duplication" error
-    return Array.from(new Set([...manual, ...scraped]));
-  }, [activeIdentity?.extractedImages, globalAssets, activeEntity.id]);
-
-  useEffect(() => {
-    const unsub = subscribeToAssets(setGlobalAssets);
-    return () => unsub();
-  }, []);
+  const [isGeneratingConcepts, setIsGeneratingConcepts] = useState(false);
+  const [isGeneratingCreatives, setIsGeneratingCreatives] = useState(false);
+  
+  // Editor
+  const [activeAssetId, setActiveAssetId] = useState<string | null>(null);
+  const [animatingAssetId, setAnimatingAssetId] = useState<string | null>(null);
 
   const SCAN_STEPS = [
-    "Analyzing brand architecture...",
-    "Conducting multi-vector search grounding...",
-    "Verifying official business domain node...",
-    "Crawling digital footprint and portfolios...",
+    "Establishing uplink to visual cortex...",
     "Extracting typographic hierarchy...",
-    "Sampling primary and secondary color gamut...",
-    "Deconstructing visual tone and archetype...",
-    "Harvesting high-fidelity hero photography...",
-    "Summarizing your business...",
-    "Finalizing Alchemy Matrix..."
+    "Sampling chromatic values...",
+    "Analyzing brand archetype...",
+    "Compiling DNA Matrix..."
   ];
 
   useEffect(() => {
-    if (activeIdentity && view === 'INTRO') {
+    if (activeIdentity) {
       setView('DASHBOARD');
     }
   }, [activeIdentity]);
 
+  // --- ACTIONS ---
+
   const handleExtract = async () => {
-    if (!targetUrl.trim()) {
-        toast.info("Target URL required.");
-        return;
-    }
+    if (!targetUrl.trim()) return;
     
     let safeUrl = targetUrl.trim();
     if (!/^https?:\/\//i.test(safeUrl)) safeUrl = `https://${safeUrl}`;
@@ -150,155 +73,178 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
 
     setView('SCANNING');
     setScanStep(0);
-    setProgress(0);
 
-    const TOTAL_MS = 15000; 
-    const stepIntervalMs = TOTAL_MS / SCAN_STEPS.length;
-
-    extractionPromiseRef.current = extractBrandDNA(activeEntity, safeUrl);
-
-    const progressInterval = setInterval(() => {
-        setProgress(prev => (prev >= 99 ? 99 : prev + 1));
-    }, TOTAL_MS / 100);
-
-    const stepInterval = setInterval(() => {
+    // Simulated scanning progress
+    const interval = setInterval(() => {
         setScanStep(prev => (prev < SCAN_STEPS.length - 1 ? prev + 1 : prev));
-    }, stepIntervalMs);
+    }, 1500);
 
     try {
-      const brandData = await extractionPromiseRef.current;
+      const brandData = await extractBrandDNA(activeEntity, safeUrl);
+      clearInterval(interval);
       
-      clearInterval(progressInterval);
-      clearInterval(stepInterval);
-      setProgress(100);
-      setScanStep(SCAN_STEPS.length - 1);
-
-      await new Promise(r => setTimeout(r, 600));
-      
-      // SYNC EVERY UNIQUE EXTRACTED IMAGE TO GLOBAL ASSET LIBRARY
-      if (brandData.extractedImages) {
-        brandData.extractedImages.forEach((img, idx) => {
-          saveAsset('IMAGE', `DNA_EXTRACT_${idx+1}: ${activeEntity.businessName}`, img, 'BRAND_DNA', activeEntity.id);
-        });
-      }
-
       if (lead && onUpdateLead) {
-        onUpdateLead(lead.id, { 
-            brandIdentity: brandData,
-            websiteUrl: brandData.verifiedUrl || targetUrl 
-        });
+        onUpdateLead(lead.id, { brandIdentity: brandData });
       } else {
-        setAdHocLead(prev => ({ 
-            ...prev, 
-            businessName: new URL(brandData.verifiedUrl || safeUrl).hostname.replace('www.', '').split('.')[0].toUpperCase(),
-            websiteUrl: brandData.verifiedUrl || targetUrl,
-            brandIdentity: brandData 
-        }));
+        let name = "TARGET";
+        try { name = new URL(safeUrl).hostname.replace('www.', '').split('.')[0].toUpperCase(); } catch (e) {}
+        setAdHocLead(prev => ({ ...prev, businessName: name, brandIdentity: brandData }));
       }
-      
       setView('DASHBOARD');
-      toast.success("ALCHEMY MATRIX SYNCHRONIZED.");
-      
-    } catch (e: any) {
-      clearInterval(progressInterval);
-      clearInterval(stepInterval);
-      toast.error(`Extraction failed: ${e.message || 'Check URL'}`);
+    } catch (e) {
+      clearInterval(interval);
+      console.error("Extraction Failed:", e);
+      toast.error("Extraction failed. Please try again.");
       setView('IDLE');
     }
   };
 
-  const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    const fileArray = Array.from(files);
-    toast.neural(`Alchemy Compression Active: Optimizing ${fileArray.length} assets...`);
-
-    for (const file of fileArray) {
-        const rawDataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => resolve(ev.target?.result as string);
-            reader.readAsDataURL(file);
+  const generateConcepts = async () => {
+    setIsGeneratingConcepts(true);
+    try {
+        const prompt = `
+            Analyze the brand "${activeEntity.businessName}" (${activeIdentity?.visualTone}).
+            Generate 3 distinct, high-end social media campaign concepts.
+            
+            Return JSON:
+            [
+                { 
+                    "title": "Campaign Title", 
+                    "hook": "Emotional hook description", 
+                    "visualDirection": "Visual style instructions" 
+                }
+            ]
+        `;
+        
+        const response = await loggedGenerateContent({
+            module: 'BRAND_DNA', contents: prompt,
+            config: { responseMimeType: 'application/json' }
         });
-        
-        // COMPRESS BEFORE SAVING
-        const optimizedDataUrl = await compressImage(rawDataUrl);
-        
-        // COMMIT TO ASSET LIBRARY
-        saveAsset('IMAGE', `MANUAL_UPLOAD: ${activeEntity.businessName}`, optimizedDataUrl, 'BRAND_DNA', activeEntity.id);
-    }
 
-    toast.success(`${fileArray.length} Assets Optimized and Synced.`);
-    if (manualUploadRef.current) manualUploadRef.current.value = '';
-  };
+        const parsed = JSON.parse(response);
+        const newConcepts = parsed.map((c: any, i: number) => ({ ...c, id: `concept-${i}` }));
+        setConcepts(newConcepts);
+        setView('STRATEGY_SELECT');
 
-  const handleLooksGood = () => {
-    if (onNavigate) {
-        onNavigate('OUTREACH', 'CAMPAIGN_ORCHESTRATOR');
-    } else {
-        toast.info("Nav Link Offline. Re-initializing...");
+    } catch (e) {
+        console.error(e);
+        toast.error("Failed to generate concepts.");
+    } finally {
+        setIsGeneratingConcepts(false);
     }
   };
 
-  if (view === 'INTRO') {
-    return (
-        <div className="min-h-[85vh] flex flex-col items-center justify-center p-8 bg-[#0a0a0a] animate-in fade-in duration-1000">
-            <div className="max-w-6xl w-full text-center space-y-20">
-                <div className="space-y-6">
-                    <span className="text-4xl">🧪</span>
-                    <h1 className="text-3xl font-serif text-white italic tracking-tight uppercase">Brand Alchemy Protocol</h1>
-                    <p className="text-slate-400 text-sm font-medium opacity-80 uppercase tracking-widest">Generate On-Brand Campaigns with Neural Extraction</p>
-                </div>
+  const handleSelectConcept = async (concept: CampaignConcept) => {
+      setSelectedConcept(concept);
+      setIsGeneratingCreatives(true);
+      setView('CAMPAIGN');
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                    {[
-                        { step: 1, title: 'Extract DNA', desc: 'Enter your website and we\'ll extract your unique brand matrix.', icon: '🧬' },
-                        { step: 2, title: 'Concept Hooks', desc: 'We\'ll use your DNA to create tailored marketing hooks.', icon: '📢' },
-                        { step: 3, title: 'Synthesize Assets', desc: 'Neural synthesis of high-fidelity, on-brand creatives.', icon: '✨' }
-                    ].map((s) => (
-                        <div key={s.step} className="bg-[#141414] rounded-[48px] p-12 border-2 border-slate-800/50 flex flex-col items-center text-center space-y-6 shadow-xl group hover:border-emerald-500/30 transition-all">
-                            <div className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center text-[10px] font-black text-slate-500">{s.step}</div>
-                            <h3 className="text-lg font-serif italic text-white leading-none uppercase">{s.title}</h3>
-                            <div className="w-24 h-24 bg-emerald-500/10 rounded-[32px] flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">
-                                {s.icon}
-                            </div>
-                            <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">{s.desc}</p>
-                        </div>
-                    ))}
-                </div>
+      const timestamp = Date.now();
+      const angles = ['STORY', 'PRODUCT', 'LIFESTYLE', 'ABSTRACT'];
+      
+      try {
+          const promises = angles.map(async (angle, idx) => {
+              const prompt = `Vertical 9:16 social for ${activeEntity.businessName}. Theme: ${concept.title}. Angle: ${angle}. Colors: ${activeIdentity?.colors.join(', ')}.`;
+              const imgUrl = await generateVisual(prompt, activeEntity);
+              
+              if (!imgUrl) return null;
 
-                <button 
-                    onClick={() => setView('IDLE')}
-                    className="bg-[#c2d18b] hover:bg-[#d4ff5f] text-black px-16 py-5 rounded-full text-sm font-black uppercase tracking-widest transition-all shadow-2xl active:scale-95"
-                >
-                    Initialize Extraction
-                </button>
-            </div>
-        </div>
-    );
-  }
+              // Explicitly cast to resolve type compatibility errors
+              return {
+                  id: `creative-${timestamp}-${idx}`,
+                  type: 'static' as const,
+                  angle: angle as any,
+                  imageUrl: imgUrl,
+                  headline: idx === 0 ? concept.title : activeEntity.businessName,
+                  subhead: concept.hook.slice(0, 40) + "...",
+                  cta: "Shop Now",
+                  status: 'ready' as const
+              } as CreativeAsset;
+          });
+
+          const results = await Promise.all(promises);
+          const validAssets = results.filter((r): r is CreativeAsset => r !== null);
+
+          const newCampaign: Campaign = {
+              id: `camp-${timestamp}`,
+              name: concept.title,
+              timestamp,
+              creatives: validAssets
+          };
+
+          setActiveCampaign(newCampaign);
+          
+          if (lead && onUpdateLead) {
+              const current = lead.campaigns || [];
+              onUpdateLead(lead.id, { campaigns: [newCampaign, ...current] });
+          }
+
+      } catch (e) {
+          console.error(e);
+          toast.error("Asset generation failed.");
+      } finally {
+          setIsGeneratingCreatives(false);
+      }
+  };
+
+  const handleSaveAssetToVault = (asset: CreativeAsset) => {
+      saveAsset(
+          asset.type === 'motion' ? 'VIDEO' : 'IMAGE',
+          `${asset.headline} - ${asset.angle}`,
+          asset.type === 'motion' && asset.videoUrl ? asset.videoUrl : asset.imageUrl,
+          'BRAND_DNA',
+          activeEntity.id
+      );
+  };
+
+  const handleAnimateAsset = async (asset: CreativeAsset) => {
+      setAnimatingAssetId(asset.id);
+      try {
+          const videoUrl = await generateVideoPayload(
+              `Cinematic animation of ${asset.angle} shot`, 
+              activeEntity.id, 
+              asset.imageUrl 
+          );
+          
+          if (videoUrl && activeCampaign) {
+              const updatedCreatives = activeCampaign.creatives.map(c => 
+                  c.id === asset.id ? { ...c, type: 'motion' as const, videoUrl: videoUrl } : c
+              );
+              setActiveCampaign({ ...activeCampaign, creatives: updatedCreatives });
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setAnimatingAssetId(null);
+      }
+  };
+
+  // --- RENDERERS ---
 
   if (view === 'IDLE') {
     return (
-        <div className="min-h-[80vh] flex flex-col items-center justify-center p-8 bg-[#0a0a0a]">
-            <div className="max-w-3xl w-full text-center space-y-12">
-                <div className="space-y-4">
-                    <h1 className="text-3xl font-serif text-white italic tracking-tight uppercase">Initialize Alchemy Protocol</h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-[0.3em] text-[10px]">Enter official business domain for extraction</p>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center p-8 bg-[#0b0c0f]">
+            <div className="max-w-2xl w-full text-center space-y-12 animate-in fade-in duration-700">
+                <div className="space-y-6">
+                    <span className="text-6xl animate-pulse">🧬</span>
+                    <h1 className="text-6xl font-serif text-[#e2e2e2] italic tracking-tight">Welcome to Pomelli</h1>
+                    <p className="text-sm text-slate-400 font-medium uppercase tracking-[0.2em]">
+                        Easily generate on-brand social media campaigns.
+                    </p>
                 </div>
-                <div className="relative max-w-xl mx-auto space-y-10">
+
+                <div className="relative group max-w-lg mx-auto">
                     <input 
                         value={targetUrl}
                         onChange={(e) => setTargetUrl(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleExtract()}
-                        placeholder="HTTPS://BUSINESS-DOMAIN.COM"
-                        className="w-full bg-[#141414] border-2 border-slate-800 rounded-full px-10 py-7 text-center text-sm font-bold text-white focus:outline-none focus:border-emerald-500 transition-all shadow-2xl"
+                        placeholder="https://yourbrand.com"
+                        className="w-full bg-[#1a1a1a] border border-slate-800 text-[#e2e2e2] px-8 py-6 rounded-full text-center text-sm font-medium focus:outline-none focus:border-[#d4ff5f] transition-all shadow-2xl"
                     />
                     <button 
                         onClick={handleExtract}
-                        className="bg-[#c2d18b] hover:bg-[#d4ff5f] text-black px-16 py-5 rounded-full text-sm font-black uppercase tracking-widest transition-all shadow-xl active:scale-95"
+                        className="mt-8 bg-[#d4ff5f] hover:bg-[#b8e645] text-black px-10 py-4 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-transform active:scale-95 shadow-[0_0_20px_rgba(212,255,95,0.3)]"
                     >
-                        START ALCHEMY AUDIT
+                        Generate Business DNA
                     </button>
                 </div>
             </div>
@@ -308,188 +254,216 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
 
   if (view === 'SCANNING') {
       return (
-        <div className="min-h-[85vh] flex flex-col items-center justify-center p-6 bg-[#0a0a0a]">
-            <div className="relative w-full max-w-xl bg-[#141414] rounded-[48px] p-16 text-center shadow-2xl border border-slate-800/80 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
-                
-                <div className="space-y-10 relative z-10">
-                    <div className="space-y-4">
-                        <h2 className="text-3xl font-serif text-white italic tracking-tight uppercase leading-none">Generating Business DNA</h2>
-                        <p className="text-[12px] text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
-                            We’re researching and analyzing your business. This usually takes 30-60 seconds.
-                        </p>
-                    </div>
-
-                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-[#c2d18b] border border-[#c2d18b]/30 rounded-full">
-                       <span className="text-xl">✨</span>
-                       <span className="text-[11px] font-black text-black uppercase tracking-wide animate-in fade-in" key={scanStep}>{SCAN_STEPS[scanStep]}</span>
-                    </div>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 bg-[#0b0c0f]">
+            <div className="relative w-full max-w-md bg-[#161616] rounded-[32px] p-12 text-center shadow-2xl border border-slate-800/50">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#d4ff5f]/5 to-transparent rounded-[32px] pointer-events-none"></div>
+                <div className="space-y-8 relative z-10">
+                    <h2 className="text-3xl font-serif text-[#e2e2e2] italic">Generating your Business DNA</h2>
+                    <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">
+                        We're researching and analyzing your business.<br/>
+                        It will take several minutes. Feel free to come back later.
+                    </p>
                     
-                    <div className="bg-[#0f0f0f] rounded-[32px] overflow-hidden border border-slate-800 shadow-2xl relative aspect-video flex items-center justify-center">
-                        {targetUrl ? (
-                            <img 
-                                src={`https://s0.wp.com/mshots/v1/${encodeURIComponent(targetUrl)}?w=1280&h=960`} 
-                                className="w-full h-full object-cover opacity-80" 
-                                alt="Site Preview"
-                            />
-                        ) : (
-                            <div className="w-12 h-12 border-4 border-slate-800 border-t-emerald-500 rounded-full animate-spin"></div>
-                        )}
-                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 to-transparent"></div>
+                    <div className="flex justify-center py-8">
+                        <div className="relative">
+                            <div className="w-16 h-16 border-2 border-slate-800 rounded-full animate-[spin_3s_linear_infinite]"></div>
+                            <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-[#d4ff5f] rounded-full animate-[spin_1.5s_linear_infinite]"></div>
+                        </div>
                     </div>
 
-                    <div className="bg-slate-900/60 border border-slate-800 px-6 py-4 rounded-full flex items-center justify-center gap-3">
-                        <span className="text-slate-500">🔗</span>
-                        <span className="text-[11px] font-black text-slate-300 uppercase tracking-widest truncate max-w-xs">{targetUrl}</span>
-                    </div>
-
-                    <div className="pt-4 flex flex-col items-center gap-4">
-                       <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
-                          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest italic animate-pulse">PROCESSING_MATRICES</p>
-                       </div>
-                       <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                       </div>
+                    <div className="inline-flex items-center gap-3 px-6 py-3 bg-[#1a1a1a] rounded-full border border-slate-800">
+                        <span className="text-[#d4ff5f] text-lg">✨</span>
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{SCAN_STEPS[scanStep]}</span>
                     </div>
                 </div>
             </div>
-            
-            <button 
-                onClick={() => setView('IDLE')}
-                className="mt-8 px-8 py-3 bg-slate-900 border border-slate-800 text-slate-400 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:text-white transition-colors"
-            >
-                ← ABORT_SCAN
-            </button>
         </div>
       );
   }
 
   if (view === 'DASHBOARD' && activeIdentity) {
       return (
-          <div className="max-w-[1550px] mx-auto py-12 px-8 space-y-12 animate-in fade-in zoom-in-95 duration-1000 bg-[#0a0a0a] min-h-screen pb-40">
-              <div className="text-center space-y-6">
-                  <span className="text-4xl">🧬</span>
-                  <h1 className="text-3xl font-serif text-white italic tracking-tight leading-none uppercase tracking-tighter">Your Business DNA</h1>
-                  <p className="text-slate-500 text-sm max-w-lg mx-auto leading-relaxed uppercase tracking-widest opacity-60">Neural snapshot of your business profile and creative assets.</p>
+          <div className="max-w-[1400px] mx-auto py-12 px-6 space-y-12 animate-in fade-in zoom-in-95 duration-700 bg-[#0b0c0f] min-h-screen">
+              <div className="text-center space-y-4">
+                  <span className="text-3xl">🧬</span>
+                  <h1 className="text-5xl font-serif text-[#e2e2e2] italic">Your Business DNA</h1>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-[0.2em]">Snapshot of {activeEntity.businessName}</p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                  <div className="lg:col-span-6 space-y-6 flex flex-col">
-                      <div className="bg-[#141414] rounded-[32px] p-12 flex flex-col justify-between border-2 border-slate-800/50 shadow-xl relative overflow-hidden flex-1 min-h-[400px]">
-                          <div className="space-y-4">
-                              <h2 className="text-2xl font-serif text-white uppercase tracking-tighter leading-tight max-w-md">{activeEntity.businessName}</h2>
-                              <a href={activeEntity.websiteUrl} target="_blank" className="text-[11px] text-emerald-400 font-mono hover:underline flex items-center gap-2 uppercase tracking-[0.1em]">
-                                  🔗 {activeEntity.websiteUrl ? new URL(activeEntity.websiteUrl).hostname : 'N/A'}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Left Column: Identity Info */}
+                  <div className="lg:col-span-5 space-y-6">
+                      <div className="bg-[#1a1a1a] rounded-[32px] p-10 border border-slate-800 flex flex-col justify-between min-h-[300px] relative overflow-hidden">
+                          <div className="relative z-10">
+                              <h2 className="text-4xl font-serif text-white mb-2">{activeEntity.businessName}</h2>
+                              <a href={targetUrl} target="_blank" className="text-[10px] text-[#d4ff5f] font-mono hover:underline flex items-center gap-2">
+                                  🔗 {new URL(targetUrl || 'https://google.com').hostname}
                               </a>
                           </div>
-
-                          <div className="grid grid-cols-2 gap-6 mt-12">
-                              <div className="bg-[#1a1a1a] p-12 rounded-[40px] border border-slate-800 flex flex-col justify-center items-center text-center group transition-all hover:bg-slate-900 shadow-xl">
-                                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-6 block">FONTS</span>
-                                  <span className="text-5xl font-serif leading-none text-[#c2d18b]">Aa</span>
-                                  <span className="text-[10px] font-black mt-8 text-slate-300 uppercase tracking-widest">{activeIdentity.fontPairing?.split('/')?.[0] || 'Modern Sans'}</span>
-                              </div>
-                              <div className="bg-[#1a1a1a] p-12 rounded-[40px] border border-slate-800 flex flex-col items-center justify-center group transition-all hover:bg-slate-900 shadow-xl">
-                                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-8 block">COLORS</span>
-                                  <div className="flex gap-6">
-                                      {(activeIdentity.colors || []).slice(0,3).map((c, i) => (
-                                          <div key={i} className="flex flex-col items-center gap-4">
-                                              <div className="w-10 h-10 rounded-full border-4 border-[#141414] shadow-2xl transition-transform group-hover:scale-110" style={{ backgroundColor: c }}></div>
-                                              <span className="text-[8px] font-bold text-slate-600 uppercase font-mono">{c}</span>
-                                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-8">
+                              <div className="bg-[#222] p-6 rounded-[24px]">
+                                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4 block">COLORS</span>
+                                  <div className="flex -space-x-2">
+                                      {activeIdentity.colors.slice(0,4).map((c, i) => (
+                                          <div key={i} className="w-10 h-10 rounded-full border-2 border-[#222]" style={{ backgroundColor: c }}></div>
                                       ))}
                                   </div>
                               </div>
+                              <div className="bg-[#e8e8e3] p-6 rounded-[24px] text-black flex flex-col justify-center items-center text-center">
+                                  <span className="text-[9px] font-black opacity-50 uppercase tracking-widest mb-1">FONT</span>
+                                  <span className="text-3xl font-serif">Aa</span>
+                                  <span className="text-[8px] font-bold mt-1 uppercase">{activeIdentity.fontPairing.split('/')[0]}</span>
+                              </div>
                           </div>
                       </div>
 
-                      <div className="bg-[#141414] rounded-[48px] p-12 border-2 border-slate-800/50 shadow-xl space-y-10">
-                          <div className="space-y-6">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.4em] block border-b border-slate-800 pb-4">BRAND VOICE & ARCHETYPE</span>
-                            <div className="flex flex-wrap gap-3">
-                                <span className="px-6 py-3 rounded-full border-2 border-slate-800 bg-slate-900/50 text-slate-300 text-[11px] font-serif italic uppercase tracking-widest">{activeIdentity.visualTone || 'Elite Professional'}</span>
-                                <span className="px-6 py-3 rounded-full border-2 border-emerald-500/30 bg-emerald-900/10 text-emerald-400 text-[10px] font-black uppercase tracking-widest shadow-inner">{activeIdentity.archetype || 'Creator'}</span>
-                            </div>
+                      <div className="bg-[#1a1a1a] rounded-[32px] p-8 border border-slate-800">
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4 block">BRAND VOICE</span>
+                          <div className="flex flex-wrap gap-2">
+                              <span className="px-4 py-2 rounded-full border border-slate-700 text-slate-300 text-xs font-serif italic">{activeIdentity.visualTone}</span>
+                              <span className="px-4 py-2 rounded-full border border-slate-700 text-slate-300 text-xs font-serif italic">Luxury</span>
+                              <span className="px-4 py-2 rounded-full border border-slate-700 text-slate-300 text-xs font-serif italic">Timeless</span>
                           </div>
-                          
-                          {activeIdentity.manifesto && (
-                            <div className="pt-8 border-t border-slate-800">
-                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] block mb-4">BRAND MANIFESTO</span>
-                                <p className="text-[13px] text-slate-300 font-medium leading-relaxed italic line-clamp-10">"{activeIdentity.manifesto}"</p>
-                            </div>
-                          )}
                       </div>
                   </div>
 
-                  <div className="lg:col-span-6 bg-[#141414] border-2 border-slate-800/50 rounded-[56px] p-12 shadow-2xl flex flex-col min-h-[850px]">
-                      <div className="flex justify-between items-center mb-12 border-b border-slate-800/50 pb-10">
-                          <div className="space-y-1">
-                            <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em]">DETECTED ASSETS</h3>
-                            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic">Unique visual proofs and manual uploads.</p>
-                          </div>
-                          <div className="flex items-center gap-8">
-                             <button 
-                                onClick={() => manualUploadRef.current?.click()}
-                                className="px-6 py-3 bg-[#1a1a1a] border border-slate-800 rounded-2xl text-[10px] font-black text-slate-400 hover:bg-emerald-500 hover:text-black hover:border-emerald-500 transition-all shadow-lg uppercase tracking-widest"
-                             >
-                                + ADD ASSETS
-                             </button>
-                             <input 
-                                type="file" 
-                                ref={manualUploadRef} 
-                                onChange={handleManualUpload} 
-                                className="hidden" 
-                                accept="image/*" 
-                                multiple
-                             />
-                             <div className="text-right border-l border-slate-800 pl-8">
-                                <span className="text-3xl font-black text-emerald-500 italic tracking-tighter">{unifiedAssets.length}</span>
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">ITEMS</span>
-                             </div>
-                          </div>
+                  <div className="lg:col-span-7 bg-[#1a1a1a] rounded-[32px] p-8 border border-slate-800">
+                      <div className="flex justify-between items-center mb-6">
+                          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DETECTED ASSETS</h3>
+                          <span className="text-[10px] text-slate-600">{activeIdentity.extractedImages?.length || 0} ITEMS</span>
                       </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 flex-1 overflow-y-auto custom-scrollbar pr-4 content-start">
-                          {unifiedAssets.map((img, i) => (
-                              <BrandImage key={i} src={img} fallback={activeIdentity.screenshotUrl} />
-                          ))}
-                          {unifiedAssets.length === 0 && (
-                              <div className="col-span-full h-96 flex flex-col items-center justify-center opacity-10 space-y-8 grayscale scale-110">
-                                  <span className="text-[120px]">📂</span>
-                                  <p className="text-[12px] font-black uppercase tracking-[0.8em]">Extraction Buffer Empty</p>
+                      <div className="grid grid-cols-3 gap-4">
+                          {activeIdentity.extractedImages?.map((img, i) => (
+                              <div key={i} className="aspect-[3/4] bg-black rounded-2xl overflow-hidden relative group border border-slate-800 hover:border-[#d4ff5f] transition-all cursor-pointer">
+                                  <img src={img} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                  <div className="absolute top-2 right-2 w-5 h-5 bg-[#d4ff5f] text-black rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
+                                      +
+                                  </div>
                               </div>
+                          ))}
+                          {(!activeIdentity.extractedImages || activeIdentity.extractedImages.length === 0) && (
+                              <div className="col-span-3 py-20 text-center opacity-30">No assets found.</div>
                           )}
                       </div>
                   </div>
               </div>
 
-              <div className="flex justify-between items-center pt-20 border-t border-slate-800/50">
+              <div className="flex justify-end pt-8">
                   <button 
-                    onClick={() => setView('SCANNING')}
-                    className="px-10 py-5 text-[11px] font-black text-slate-600 uppercase tracking-[0.4em] hover:text-white transition-colors flex items-center gap-6 group border border-slate-800 rounded-full"
+                      onClick={generateConcepts}
+                      disabled={isGeneratingConcepts}
+                      className="bg-[#d4ff5f] hover:bg-[#b8e645] text-black px-12 py-5 rounded-full text-xs font-black uppercase tracking-[0.1em] transition-all shadow-[0_0_30px_rgba(212,255,95,0.2)] active:scale-95"
                   >
-                    <span className="group-hover:-translate-x-2 transition-transform text-lg">←</span> RESET
+                      {isGeneratingConcepts ? 'Analyzing Strategy...' : 'Get Campaign Ideas →'}
                   </button>
-                  
-                  <div className="flex items-center gap-12">
-                      <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest italic hidden xl:block">READY TO GENERATE SOCIAL MEDIA CAMPAIGNS?</p>
-                      <button 
-                          onClick={handleLooksGood}
-                          className="bg-[#c2d18b] hover:bg-[#d4ff5f] text-black px-20 py-7 rounded-full text-sm font-black uppercase tracking-widest shadow-[0_0_50px_rgba(194,209,139,0.3)] active:scale-95 transition-all"
-                      >
-                          Looks good
-                      </button>
-                  </div>
               </div>
           </div>
       );
   }
 
-  return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center bg-[#0a0a0a] p-20 border-2 border-dashed border-slate-800 rounded-[64px] m-10">
-        <p className="text-[12px] font-black text-slate-700 uppercase tracking-[0.6em] animate-pulse">Alchemy Matrix Fault: Critical State Sync Required</p>
-        <button onClick={() => setView('IDLE')} className="mt-8 bg-slate-900 border border-slate-800 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-800">RESET MODULE</button>
-    </div>
-  );
+  if (view === 'STRATEGY_SELECT') {
+      return (
+          <div className="max-w-6xl mx-auto py-16 px-6 animate-in fade-in slide-in-from-bottom-8 duration-700 bg-[#0b0c0f] min-h-screen">
+              <div className="text-center space-y-4 mb-16">
+                  <span className="text-3xl block mb-4">📢</span>
+                  <h1 className="text-5xl font-serif text-[#e2e2e2] italic">Select a Campaign Direction</h1>
+                  <p className="text-sm text-slate-500 font-medium uppercase tracking-[0.2em]">
+                      Based on your DNA, here are 3 recommended strategies.
+                  </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {concepts.map((concept, i) => (
+                      <div 
+                          key={concept.id} 
+                          onClick={() => handleSelectConcept(concept)}
+                          className="bg-[#1a1a1a] border border-slate-800 rounded-[32px] p-8 hover:border-[#d4ff5f] hover:shadow-[0_0_30px_rgba(212,255,95,0.1)] transition-all cursor-pointer group flex flex-col min-h-[400px]"
+                      >
+                          <div className="flex-1 space-y-6">
+                              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest border border-slate-800 px-3 py-1 rounded-full">CONCEPT 0{i+1}</span>
+                              <h3 className="text-3xl font-serif text-white italic leading-tight group-hover:text-[#d4ff5f] transition-colors">{concept.title}</h3>
+                              <p className="text-sm text-slate-400 leading-relaxed">{concept.hook}</p>
+                          </div>
+                          <div className="mt-8 pt-8 border-t border-slate-800">
+                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">VISUAL DIRECTION</p>
+                              <p className="text-xs text-slate-500 italic">{concept.visualDirection}</p>
+                              
+                              <div className="mt-6 w-full py-4 bg-slate-900 group-hover:bg-[#d4ff5f] rounded-2xl flex items-center justify-center transition-colors">
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-black">Generate Assets</span>
+                              </div>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      );
+  }
+
+  if (view === 'CAMPAIGN' || view === 'EDITOR') {
+      return (
+          <div className="h-screen bg-[#0b0c0f] flex flex-col overflow-hidden">
+              <header className="h-20 px-8 flex items-center justify-between border-b border-slate-800 shrink-0 bg-[#0b0c0f] z-20">
+                  <button onClick={() => setView('STRATEGY_SELECT')} className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                      ← Back to Concepts
+                  </button>
+                  <h2 className="font-serif text-white italic text-xl">{activeCampaign?.name || 'New Campaign'}</h2>
+                  <div className="w-20"></div>
+              </header>
+
+              <div className="flex-1 overflow-y-auto p-12 bg-[#0b0c0f]">
+                  {isGeneratingCreatives ? (
+                      <div className="h-full flex flex-col items-center justify-center space-y-8">
+                          <div className="w-20 h-20 border-4 border-slate-800 border-t-[#d4ff5f] rounded-full animate-spin"></div>
+                          <p className="text-xs font-black text-[#d4ff5f] uppercase tracking-[0.3em] animate-pulse">Forging Visual Assets...</p>
+                      </div>
+                  ) : (
+                      <div className="max-w-[1600px] mx-auto">
+                          <div className="text-center mb-16 space-y-4">
+                              <span className="text-2xl">✨</span>
+                              <h2 className="text-4xl font-serif text-white italic">Campaign Assets</h2>
+                              <p className="text-xs text-slate-500 uppercase tracking-widest">Ready to deploy. Click to Edit or Animate.</p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                              {activeCampaign?.creatives.map((asset) => (
+                                  <div key={asset.id} className="group relative aspect-[9/16] bg-[#1a1a1a] rounded-[24px] overflow-hidden shadow-2xl border border-slate-800 hover:border-[#d4ff5f] transition-all cursor-pointer">
+                                      {asset.type === 'motion' && asset.videoUrl ? (
+                                          <video src={asset.videoUrl} autoPlay loop muted className="w-full h-full object-cover" />
+                                      ) : (
+                                          <img src={asset.imageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-700 group-hover:scale-105" />
+                                      )}
+                                      
+                                      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/80 flex flex-col justify-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                                          <span className="text-[8px] font-black text-[#d4ff5f] uppercase tracking-widest mb-2 border border-[#d4ff5f] px-2 py-1 rounded-full w-fit">{asset.angle}</span>
+                                          <h3 className="text-2xl font-serif text-white italic leading-none mb-2">{asset.headline}</h3>
+                                          <p className="text-[10px] text-slate-300 uppercase tracking-wide line-clamp-2">{asset.subhead}</p>
+                                          
+                                          <div className="flex gap-2 mt-4">
+                                              <button 
+                                                  onClick={() => handleSaveAssetToVault(asset)}
+                                                  className="flex-1 bg-white text-black py-3 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-[#d4ff5f] transition-colors"
+                                              >
+                                                  Save
+                                              </button>
+                                              <button 
+                                                  onClick={() => handleAnimateAsset(asset)}
+                                                  className="bg-black/50 backdrop-blur border border-white/20 text-white p-3 rounded-full hover:bg-black transition-colors"
+                                                  title="Animate with Veo"
+                                              >
+                                                  {animatingAssetId === asset.id ? '...' : '⚡'}
+                                              </button>
+                                          </div>
+                                      </div>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                  )}
+              </div>
+          </div>
+      );
+  }
+
+  return <div>Error State</div>;
 };
