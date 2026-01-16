@@ -9,7 +9,19 @@ export type { Lead, AssetRecord, BenchmarkReport, VeoConfig, GeminiResult, Engin
 const GEMINI_MODEL = "gemini-3-flash-preview";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-export const SESSION_ASSETS: AssetRecord[] = [];
+const STORAGE_KEY_ASSETS = 'prospector_os_vault_v1';
+
+// PERSISTENT ASSET STORAGE
+const loadAssets = (): AssetRecord[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ASSETS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const SESSION_ASSETS: AssetRecord[] = loadAssets();
 export const PRODUCTION_LOGS: string[] = [];
 
 /* =========================================================
@@ -32,6 +44,14 @@ export function getStoredKeys() {
    ASSET HELPERS
    ========================================================= */
 
+const assetListeners = new Set<(assets: AssetRecord[]) => void>();
+
+const notifyAssetListeners = () => {
+  const current = [...SESSION_ASSETS];
+  assetListeners.forEach(l => l(current));
+  localStorage.setItem(STORAGE_KEY_ASSETS, JSON.stringify(current));
+};
+
 export function saveAsset(
   type: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO',
   title: string,
@@ -50,12 +70,17 @@ export function saveAsset(
     leadId,
     metadata
   };
-  SESSION_ASSETS.push(asset);
-  assetListeners.forEach(l => l([...SESSION_ASSETS]));
+  
+  // Deduplicate images if base64 matches exactly
+  if (type === 'IMAGE' || type === 'AUDIO') {
+    const exists = SESSION_ASSETS.find(a => a.data === data);
+    if (exists) return exists;
+  }
+
+  SESSION_ASSETS.unshift(asset);
+  notifyAssetListeners();
   return asset;
 }
-
-const assetListeners = new Set<(assets: AssetRecord[]) => void>();
 
 export function subscribeToAssets(callback: (assets: AssetRecord[]) => void) {
   assetListeners.add(callback);
@@ -67,18 +92,18 @@ export function deleteAsset(id: string) {
   const idx = SESSION_ASSETS.findIndex(a => a.id === id);
   if (idx >= 0) {
     SESSION_ASSETS.splice(idx, 1);
-    assetListeners.forEach(l => l([...SESSION_ASSETS]));
+    notifyAssetListeners();
   }
 }
 
 export function clearVault() {
   SESSION_ASSETS.length = 0;
-  assetListeners.forEach(l => l([...SESSION_ASSETS]));
+  notifyAssetListeners();
 }
 
 export function importVault(items: AssetRecord[]) {
   SESSION_ASSETS.push(...items);
-  assetListeners.forEach(l => l([...SESSION_ASSETS]));
+  notifyAssetListeners();
 }
 
 export function pushLog(message: string) {
@@ -207,16 +232,15 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
     
     1. DOMAIN VERIFICATION (CRITICAL):
        - Confirm the OFFICIAL active website for "${lead.businessName}". Use Google Search Grounding to find the absolute correct domain if "${url}" is invalid.
-       - Note: For "Century City Aesthetic Dentistry", the domain is centurycityaesthetics.com.
 
     2. ASSET HARVEST (PROOF OF EXTRACTION):
-       - LOCATE: exactly 10-12 legitimate, high-resolution DIRECT image URLs from the website portfolio, gallery, or official social media.
-       - MUST INCLUDE: The main 'Hero' or 'Banner' image used on the homepage.
-       - REJECT: No logo placeholders, no tiny icons, no tracking pixels.
+       - LOCATE: exactly 10-12 legitimate, functional, high-resolution DIRECT image URLs from the website portfolio, gallery, or official Instagram.
+       - IMPORTANT: Do not return placeholders. Look for real .jpg, .png, or .webp URLs in the search results or from the official site.
+       - MUST INCLUDE: The main 'Hero' or 'Banner' image used on the homepage as the first item.
 
     3. STRATEGIC ANALYSIS:
-       - IDENTIFY: Exact HEX color codes and Typographic pairings (Heading/Body names).
-       - ARCHETYPE: Determine the core Jungian archetype (e.g., The Creator, The Ruler).
+       - IDENTIFY: Exact HEX color codes and Typographic pairings.
+       - ARCHETYPE: Determine the core Jungian archetype.
        - MANIFESTO: Write a compelling 3-paragraph "Brand Manifesto".
 
     RETURN A HIGH-FIDELITY JSON OBJECT.
@@ -239,7 +263,7 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
         targetAudiencePsychology: { type: Type.STRING },
         competitiveGapNarrative: { type: Type.STRING },
         logoUrl: { type: Type.STRING },
-        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 10-12 high-res image URLs." }
+        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 10-12 real, working image URLs." }
       },
       required: ["verifiedUrl", "colors", "fontPairing", "archetype", "manifesto", "extractedImages"]
     }
@@ -251,7 +275,6 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
 
   try {
     const data = JSON.parse(result.text) as BrandIdentity;
-    // Embed screenshot metadata for visual confirmation flow
     if (data.verifiedUrl) {
       data.screenshotUrl = `https://s0.wp.com/mshots/v1/${encodeURIComponent(data.verifiedUrl)}?w=1280&h=960`;
     }
