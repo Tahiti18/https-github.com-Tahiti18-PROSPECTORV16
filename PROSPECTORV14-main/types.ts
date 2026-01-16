@@ -60,6 +60,7 @@ export interface BrandIdentity {
   competitiveGapNarrative?: string;
   visualHierarchyAudit?: string;
   verifiedUrl?: string;
+  screenshotUrl?: string;
 }
 
 export interface CreativeAsset {

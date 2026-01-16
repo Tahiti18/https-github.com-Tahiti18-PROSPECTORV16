@@ -206,19 +206,18 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
     PREMIER ALCHEMY PROTOCOL: Conduct an exhaustive Brand DNA extraction for "${lead.businessName}".
     
     1. DOMAIN VERIFICATION (CRITICAL):
-       - Perform a Google Search to confirm the OFFICIAL website for "${lead.businessName}".
-       - If "${url}" is non-functional or appears incorrect (e.g. leads to a park page), locate the correct active domain.
-       - Note: For "Century City Aesthetic Dentistry", search results confirm the domain is centurycityaesthetics.com. Ensure you use and return the correct verified domain.
+       - Confirm the OFFICIAL active website for "${lead.businessName}". Use Google Search Grounding to find the absolute correct domain if "${url}" is invalid.
+       - Note: For "Century City Aesthetic Dentistry", the domain is centurycityaesthetics.com.
 
-    2. STRATEGIC EXTRACTION:
-       - IDENTIFY: Exact HEX color codes (Primary/Secondary) and Typographic Pairings (Heading/Body font names).
-       - ANALYZE: 3-paragraph "Brand Manifesto", "Target Audience Psychology", and "Competitive Deficit Audit".
-       - ARCHETYPE: Determine the core Jungian archetype (e.g. The Magician, The Creator).
-
-    3. ASSET HARVEST:
-       - LOCATE: exactly 10-12 legitimate, high-resolution DIRECT image URLs from the website portfolio, gallery, or official Instagram.
+    2. ASSET HARVEST (PROOF OF EXTRACTION):
+       - LOCATE: exactly 10-12 legitimate, high-resolution DIRECT image URLs from the website portfolio, gallery, or official social media.
+       - MUST INCLUDE: The main 'Hero' or 'Banner' image used on the homepage.
        - REJECT: No logo placeholders, no tiny icons, no tracking pixels.
-       - FOCUS: Hero shots, interiors, product photography, or professional portraits.
+
+    3. STRATEGIC ANALYSIS:
+       - IDENTIFY: Exact HEX color codes and Typographic pairings (Heading/Body names).
+       - ARCHETYPE: Determine the core Jungian archetype (e.g., The Creator, The Ruler).
+       - MANIFESTO: Write a compelling 3-paragraph "Brand Manifesto".
 
     RETURN A HIGH-FIDELITY JSON OBJECT.
   `;
@@ -230,7 +229,7 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
       type: Type.OBJECT,
       properties: {
         verifiedUrl: { type: Type.STRING, description: "The official verified website URL." },
-        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: " HEX codes." },
+        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of HEX codes." },
         fontPairing: { type: Type.STRING, description: "Pairing names like 'Cinzel / Inter'." },
         archetype: { type: Type.STRING },
         visualTone: { type: Type.STRING },
@@ -251,7 +250,12 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
   }
 
   try {
-    return JSON.parse(result.text);
+    const data = JSON.parse(result.text) as BrandIdentity;
+    // Embed screenshot metadata for visual confirmation flow
+    if (data.verifiedUrl) {
+      data.screenshotUrl = `https://s0.wp.com/mshots/v1/${encodeURIComponent(data.verifiedUrl)}?w=1280&h=960`;
+    }
+    return data;
   } catch (e) {
     throw new Error("Neural response malformed during synthesis.");
   }
