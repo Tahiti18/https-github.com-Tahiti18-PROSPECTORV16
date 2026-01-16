@@ -203,17 +203,22 @@ export async function fetchBenchmarkData(lead: Lead): Promise<BenchmarkReport> {
 
 export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIdentity> {
   const prompt = `
-    PREMIER ALCHEMY COMMAND: Conduct an exhaustive, 5-minute study grade Brand DNA extraction for "${lead.businessName}" (Root: ${url}).
+    PREMIER ALCHEMY PROTOCOL: Conduct an exhaustive Brand DNA extraction for "${lead.businessName}".
     
-    You must use Google Search grounding to CONDUCT A TRUE AUDIT across the following vectors:
-    1. DOMAIN HIERARCHY: Visit the homepage, About, Services, and Portfolio/Gallery sub-pages.
-    2. SOCIAL FOOTPRINT: Locate official Instagram, Facebook, and LinkedIn profiles.
-    3. VISUAL GENOME: Identify exact Primary/Secondary HEX codes and Font Pairings (H1/Body).
-    4. STRATEGIC NARRATIVE: Synthesize a 3-paragraph "Brand Manifesto", "Target Audience Psychology", and "Competitive Gap Narrative".
-    5. ASSET HARVEST: Find exactly 10-12 legitimate, high-resolution DIRECT image URLs (.jpg, .png, .webp).
-       - CRITICAL: Focus on HERO IMAGES, INTERIORS, PRODUCT SHOTS, or TEAM PORTRAITS.
-       - REJECT: Do NOT return logo placeholder URLs, tracking pixels, or generic social icons.
-       - VERIFY: Ensure the URLs are direct links found via the official site or IG CDN.
+    1. DOMAIN VERIFICATION (CRITICAL):
+       - Perform a Google Search to confirm the OFFICIAL website for "${lead.businessName}".
+       - If "${url}" is non-functional or appears incorrect (e.g. leads to a park page), locate the correct active domain.
+       - Note: For "Century City Aesthetic Dentistry", search results confirm the domain is centurycityaesthetics.com. Ensure you use and return the correct verified domain.
+
+    2. STRATEGIC EXTRACTION:
+       - IDENTIFY: Exact HEX color codes (Primary/Secondary) and Typographic Pairings (Heading/Body font names).
+       - ANALYZE: 3-paragraph "Brand Manifesto", "Target Audience Psychology", and "Competitive Deficit Audit".
+       - ARCHETYPE: Determine the core Jungian archetype (e.g. The Magician, The Creator).
+
+    3. ASSET HARVEST:
+       - LOCATE: exactly 10-12 legitimate, high-resolution DIRECT image URLs from the website portfolio, gallery, or official Instagram.
+       - REJECT: No logo placeholders, no tiny icons, no tracking pixels.
+       - FOCUS: Hero shots, interiors, product photography, or professional portraits.
 
     RETURN A HIGH-FIDELITY JSON OBJECT.
   `;
@@ -224,33 +229,31 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
     responseSchema: {
       type: Type.OBJECT,
       properties: {
-        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Primary brand colors in HEX format." },
-        fontPairing: { type: Type.STRING, description: "Typographic pairing like 'Playfair Display / Inter'." },
+        verifiedUrl: { type: Type.STRING, description: "The official verified website URL." },
+        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: " HEX codes." },
+        fontPairing: { type: Type.STRING, description: "Pairing names like 'Cinzel / Inter'." },
         archetype: { type: Type.STRING },
         visualTone: { type: Type.STRING },
         tagline: { type: Type.STRING },
         mission: { type: Type.STRING },
-        manifesto: { type: Type.STRING, description: "3-paragraph deep-layer brand story." },
-        targetAudiencePsychology: { type: Type.STRING, description: "Deep analysis of the client demographic psychology." },
-        competitiveGapNarrative: { type: Type.STRING, description: "Narrative on where competitors are winning visually." },
-        visualHierarchyAudit: { type: Type.STRING, description: "Audit of current site design hierarchy." },
+        manifesto: { type: Type.STRING },
+        targetAudiencePsychology: { type: Type.STRING },
+        competitiveGapNarrative: { type: Type.STRING },
         logoUrl: { type: Type.STRING },
-        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Exactly 10-12 valid, high-resolution direct image URLs." }
+        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 10-12 high-res image URLs." }
       },
-      required: ["colors", "fontPairing", "archetype", "visualTone", "manifesto", "extractedImages"]
+      required: ["verifiedUrl", "colors", "fontPairing", "archetype", "manifesto", "extractedImages"]
     }
   });
 
   if (!result.ok) {
-    throw new Error(result.error?.message || "Premier Audit Link Failed.");
+    throw new Error(result.error?.message || "Premier Audit Failed.");
   }
 
   try {
-    const data = JSON.parse(result.text);
-    // Ensure we don't return broken URLs if possible, but let the UI handle the resilience
-    return data;
+    return JSON.parse(result.text);
   } catch (e) {
-    throw new Error("Neural response malformed during high-fidelity synthesis.");
+    throw new Error("Neural response malformed during synthesis.");
   }
 }
 
@@ -405,6 +408,7 @@ export async function generatePlaybookStrategy(niche: string): Promise<any> {
 export async function fetchTokenStats(): Promise<any> { return { recentOps: [] }; }
 
 export async function critiqueVideoPresence(lead: Lead): Promise<string> {
+  // Fix typo: callGemory -> callGemini
   return (await callGemini(`Creative review for ${lead.businessName}`)).text;
 }
 

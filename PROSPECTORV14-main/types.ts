@@ -59,6 +59,7 @@ export interface BrandIdentity {
   targetAudiencePsychology?: string;
   competitiveGapNarrative?: string;
   visualHierarchyAudit?: string;
+  verifiedUrl?: string;
 }
 
 export interface CreativeAsset {
