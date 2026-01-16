@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { MainMode, SubModule, Lead } from './types';
 import { LayoutZenith } from './components/LayoutZenith';
@@ -124,7 +125,7 @@ const App: React.FC = () => {
       case 'PRODUCT_SYNTHESIS': return <ProductSynthesis lead={lockedLead} />;
       case 'CONTENT_IDEATION': return <ContentIdeation lead={lockedLead} />;
       case 'ASSET_LIBRARY': return <AssetLibrary />;
-      case 'BRAND_DNA': return <BrandDNA lead={lockedLead} onUpdateLead={handleUpdateLead} />;
+      case 'BRAND_DNA': return <BrandDNA lead={lockedLead} onUpdateLead={handleUpdateLead} onNavigate={navigate} />;
       case 'VIDEO_PRODUCTION': return <VideoProduction lead={lockedLead} />;
       case 'MOTION_LAB': return <MotionLab lead={lockedLead} />;
       case 'SONIC_STUDIO': return <SonicStudio lead={lockedLead} />;

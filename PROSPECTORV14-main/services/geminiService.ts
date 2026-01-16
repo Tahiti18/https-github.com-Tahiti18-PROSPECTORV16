@@ -1,3 +1,4 @@
+
 /* =========================================================
    GEMINI SERVICE – BUSINESS OPTIMIZED
    ========================================================= */
@@ -10,8 +11,9 @@ const GEMINI_MODEL = "gemini-3-flash-preview";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const STORAGE_KEY_ASSETS = 'prospector_os_vault_v1';
+const MAX_VAULT_BYTES = 3.5 * 1024 * 1024; // 3.5MB Safety Limit for Assets
 
-// PERSISTENT ASSET STORAGE
+// PERSISTENT ASSET STORAGE WITH PRUNING logic
 const loadAssets = (): AssetRecord[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_ASSETS);
@@ -25,23 +27,7 @@ export const SESSION_ASSETS: AssetRecord[] = loadAssets();
 export const PRODUCTION_LOGS: string[] = [];
 
 /* =========================================================
-   KEY STORAGE UTILITIES
-   ========================================================= */
-
-export function setStoredKeys(openRouter: string, kie: string) {
-  localStorage.setItem('pomelli_or_key', openRouter);
-  localStorage.setItem('pomelli_kie_key', kie);
-}
-
-export function getStoredKeys() {
-  return {
-    openRouter: localStorage.getItem('pomelli_or_key') || '',
-    kie: localStorage.getItem('pomelli_kie_key') || ''
-  };
-}
-
-/* =========================================================
-   ASSET HELPERS
+   ASSET HELPERS (QUOTA AWARE)
    ========================================================= */
 
 const assetListeners = new Set<(assets: AssetRecord[]) => void>();
@@ -49,7 +35,29 @@ const assetListeners = new Set<(assets: AssetRecord[]) => void>();
 const notifyAssetListeners = () => {
   const current = [...SESSION_ASSETS];
   assetListeners.forEach(l => l(current));
-  localStorage.setItem(STORAGE_KEY_ASSETS, JSON.stringify(current));
+  
+  try {
+    const serialized = JSON.stringify(current);
+    // If we're getting close to the limit, start pruning
+    if (serialized.length > MAX_VAULT_BYTES) {
+        console.warn("Vault Capacity Critical. Auto-pruning oldest assets.");
+        // Remove oldest 5 assets until we are under limit
+        while (JSON.stringify(current).length > MAX_VAULT_BYTES && current.length > 5) {
+            current.pop();
+        }
+        SESSION_ASSETS.length = 0;
+        SESSION_ASSETS.push(...current);
+        localStorage.setItem(STORAGE_KEY_ASSETS, JSON.stringify(current));
+    } else {
+        localStorage.setItem(STORAGE_KEY_ASSETS, serialized);
+    }
+  } catch (e: any) {
+    if (e.name === 'QuotaExceededError') {
+      console.error("Critical Storage Failure. Purging non-essential buffers.");
+      const reduced = current.slice(0, Math.floor(current.length / 2));
+      localStorage.setItem(STORAGE_KEY_ASSETS, JSON.stringify(reduced));
+    }
+  }
 };
 
 export function saveAsset(
@@ -71,11 +79,8 @@ export function saveAsset(
     metadata
   };
   
-  // Deduplicate images if base64 matches exactly
-  if (type === 'IMAGE' || type === 'AUDIO') {
-    const exists = SESSION_ASSETS.find(a => a.data === data);
-    if (exists) return exists;
-  }
+  const exists = SESSION_ASSETS.find(a => a.data === data);
+  if (exists) return exists;
 
   SESSION_ASSETS.unshift(asset);
   notifyAssetListeners();
@@ -228,19 +233,21 @@ export async function fetchBenchmarkData(lead: Lead): Promise<BenchmarkReport> {
 
 export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIdentity> {
   const prompt = `
-    PREMIER ALCHEMY PROTOCOL: Conduct an exhaustive Brand DNA extraction for "${lead.businessName}".
+    PREMIER ALCHEMY PROTOCOL: Conduct an exhaustive and VERIFIED Brand DNA extraction for "${lead.businessName}".
     
     1. DOMAIN VERIFICATION (CRITICAL):
-       - Confirm the OFFICIAL active website for "${lead.businessName}". Use Google Search Grounding to find the absolute correct domain if "${url}" is invalid.
+       - Search Google for "${lead.businessName} in ${lead.city}".
+       - TARGET: The official commercial website. 
+       - EXCLUSION: Skip directory sites like Yelp, Healthgrades, or ZocDoc.
+       - IMPORTANT: For "Century City Aesthetic Dentistry", the official site is often "centurycityaesthetics.com". Ensure you find the EXACT commercial match.
 
-    2. ASSET HARVEST (PROOF OF EXTRACTION):
-       - LOCATE: exactly 10-12 legitimate, functional, high-resolution DIRECT image URLs from the website portfolio, gallery, or official Instagram.
-       - IMPORTANT: Do not return placeholders. Look for real .jpg, .png, or .webp URLs in the search results or from the official site.
-       - MUST INCLUDE: The main 'Hero' or 'Banner' image used on the homepage as the first item.
+    2. ASSET HARVEST (DIVERSITY MANDATORY):
+       - LOCATE: exactly 10-12 legitimate, direct image URLs (.jpg, .png, .webp).
+       - VARIETY: DO NOT return the same URL twice. Scrape different pages (Services, Gallery, About Us, Team).
+       - REJECT: Base64 blobs or tiny icons.
 
     3. STRATEGIC ANALYSIS:
-       - IDENTIFY: Exact HEX color codes and Typographic pairings.
-       - ARCHETYPE: Determine the core Jungian archetype.
+       - IDENTIFY: HEX codes, Font Names, and Archetype.
        - MANIFESTO: Write a compelling 3-paragraph "Brand Manifesto".
 
     RETURN A HIGH-FIDELITY JSON OBJECT.
@@ -252,9 +259,9 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
     responseSchema: {
       type: Type.OBJECT,
       properties: {
-        verifiedUrl: { type: Type.STRING, description: "The official verified website URL." },
-        colors: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of HEX codes." },
-        fontPairing: { type: Type.STRING, description: "Pairing names like 'Cinzel / Inter'." },
+        verifiedUrl: { type: Type.STRING },
+        colors: { type: Type.ARRAY, items: { type: Type.STRING } },
+        fontPairing: { type: Type.STRING },
         archetype: { type: Type.STRING },
         visualTone: { type: Type.STRING },
         tagline: { type: Type.STRING },
@@ -263,7 +270,7 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
         targetAudiencePsychology: { type: Type.STRING },
         competitiveGapNarrative: { type: Type.STRING },
         logoUrl: { type: Type.STRING },
-        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 10-12 real, working image URLs." }
+        extractedImages: { type: Type.ARRAY, items: { type: Type.STRING } }
       },
       required: ["verifiedUrl", "colors", "fontPairing", "archetype", "manifesto", "extractedImages"]
     }
@@ -276,6 +283,7 @@ export async function extractBrandDNA(lead: Lead, url: string): Promise<BrandIde
   try {
     const data = JSON.parse(result.text) as BrandIdentity;
     if (data.verifiedUrl) {
+      // Primary screenshot anchor
       data.screenshotUrl = `https://s0.wp.com/mshots/v1/${encodeURIComponent(data.verifiedUrl)}?w=1280&h=960`;
     }
     return data;
@@ -311,11 +319,7 @@ export async function generateOutreachSequence(lead: Lead): Promise<any[]> {
 }
 
 export async function generateProposalDraft(lead: Lead): Promise<string> {
-  const prompt = `
-    GENERATE_PROPOSAL: Create a high-fidelity strategic transformation proposal for ${lead.businessName}.
-    Structure using UI_BLOCKS JSON.
-  `;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  const result = await callGemini(`Generate proposal for ${lead.businessName}.`, { responseMimeType: "application/json" });
   return result.text;
 }
 
@@ -422,8 +426,7 @@ export async function simulateSandbox(lead: Lead, ltv: number, volume: number): 
 }
 
 export async function generatePitch(lead: Lead): Promise<string> {
-  const prompt = `TASK: Generate a definitive sales pitch for ${lead.businessName}. Return UI_BLOCKS JSON.`;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  const result = await callGemini(`TASK: Generate a sales pitch for ${lead.businessName}. Return UI_BLOCKS JSON.`, { responseMimeType: "application/json" });
   return result.text;
 }
 
@@ -435,7 +438,6 @@ export async function generatePlaybookStrategy(niche: string): Promise<any> {
 export async function fetchTokenStats(): Promise<any> { return { recentOps: [] }; }
 
 export async function critiqueVideoPresence(lead: Lead): Promise<string> {
-  // Fix typo: callGemory -> callGemini
   return (await callGemini(`Creative review for ${lead.businessName}`)).text;
 }
 
@@ -445,9 +447,29 @@ export async function enhanceVideoPrompt(prompt: string): Promise<string> {
 }
 
 export async function orchestrateBusinessPackage(lead: Lead, assets: AssetRecord[]): Promise<any> {
-  const prompt = `Develop a comprehensive client engagement briefing for ${lead.businessName}.`;
+  const prompt = `
+    TASK: Architect a comprehensive AI Transformation Campaign for "${lead.businessName}".
+    
+    INPUT: 
+    - Client: ${lead.businessName}
+    - Niche: ${lead.niche}
+    - Website: ${lead.websiteUrl}
+    - Assets: ${JSON.stringify(assets)}
+
+    OUTPUT JSON (Strict Schema):
+    {
+      "narrative": "Executive strategy summary",
+      "presentation": { "title": "", "slides": [{ "title": "", "bullets": [] }] },
+      "visualDirection": { "brandMood": "", "colorPalette": [], "aiImagePrompts": [] },
+      "outreach": { "emailSequence": [], "linkedinSequence": [], "callScript": {} },
+      "funnel": [{ "title": "", "description": "", "conversionGoal": "" }],
+      "contentPack": [{ "platform": "", "type": "", "caption": "" }]
+    }
+  `;
+
   const result = await callGemini(prompt, { responseMimeType: "application/json" });
-  try { return JSON.parse(result.text); } catch { return { narrative: "Strategic briefing complete." }; }
+  if (!result.ok) throw new Error(result.error?.message || "Forge Failed");
+  try { return JSON.parse(result.text); } catch { throw new Error("Synthesis malformed."); }
 }
 
 export async function queryRealtimeAgent(query: string): Promise<{ text: string; sources: any[] }> {
@@ -473,25 +495,17 @@ export async function testModelPerformance(model: string, prompt: string): Promi
 }
 
 export async function generateMotionLabConcept(lead: Lead): Promise<any> {
-  const prompt = `Create a professional storyboard for ${lead.businessName}. Return JSON.`;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  const result = await callGemini(`Create storyboard for ${lead.businessName}. Return JSON.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return null; }
 }
 
 export async function fetchViralPulseData(niche: string): Promise<any[]> {
-  const prompt = `Identify top industry trends for the ${niche} sector. Return JSON array.`;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
-  try {
-    const parsed = JSON.parse(result.text);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const result = await callGemini(`Industry trends for ${niche}. Return JSON array.`, { responseMimeType: "application/json" });
+  try { return JSON.parse(result.text); } catch { return []; }
 }
 
 export async function generateAgencyIdentity(niche: string, region: string): Promise<any> {
-  const prompt = `Generate a professional agency profile for a company in ${niche} focusing on ${region}. Return JSON.`;
-  const result = await callGemini(prompt, { responseMimeType: "application/json" });
+  const result = await callGemini(`Generate agency profile for ${niche} in ${region}. Return JSON.`, { responseMimeType: "application/json" });
   try { return JSON.parse(result.text); } catch { return {}; }
 }
 
@@ -500,6 +514,7 @@ export async function generateAudioPitch(script: string, voice: string, leadId?:
     model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: script }] }],
     config: {
+      // Must be an array with a single `Modality.AUDIO` element.
       responseModalities: [Modality.AUDIO],
       speechConfig: {
           voiceConfig: {
@@ -515,4 +530,21 @@ export async function generateAudioPitch(script: string, voice: string, leadId?:
       return dataUrl;
   }
   throw new Error("Audio generation failed");
+}
+
+// Comment: Add missing setStoredKeys and getStoredKeys exports for API key persistence.
+/* =========================================================
+   PERSISTENCE HELPERS
+   ========================================================= */
+
+export function setStoredKeys(openRouterKey: string, kieKey: string) {
+  localStorage.setItem('pomelli_openrouter_key', openRouterKey);
+  localStorage.setItem('pomelli_kie_key', kieKey);
+}
+
+export function getStoredKeys() {
+  return {
+    openRouter: localStorage.getItem('pomelli_openrouter_key') || '',
+    kie: localStorage.getItem('pomelli_kie_key') || ''
+  };
 }

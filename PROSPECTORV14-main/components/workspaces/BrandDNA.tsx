@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lead, BrandIdentity, MainMode, SubModule } from '../../types';
-import { extractBrandDNA, saveAsset } from '../../services/geminiService';
+import { extractBrandDNA, saveAsset, subscribeToAssets, AssetRecord } from '../../services/geminiService';
 import { toast } from '../../services/toastManager';
 
 interface BrandDNAProps {
@@ -9,14 +10,23 @@ interface BrandDNAProps {
   onNavigate?: (mode: MainMode, mod: SubModule) => void;
 }
 
-// Resilient Image Component to handle broken AI URLs or loading delays
-const BrandImage: React.FC<{ src: string }> = ({ src }) => {
+// Resilient Image Component with intelligent loading and fallback
+const BrandImage: React.FC<{ src: string; fallback?: string }> = ({ src, fallback }) => {
     const [status, setStatus] = useState<'loading' | 'error' | 'success'>('loading');
+    const [currentSrc, setCurrentSrc] = useState(src);
     
-    // Check if data is base64 for immediate rendering
     useEffect(() => {
         if (src.startsWith('data:')) setStatus('success');
     }, [src]);
+
+    const handleError = () => {
+        if (fallback && currentSrc !== fallback) {
+            setCurrentSrc(fallback);
+            setStatus('loading');
+        } else {
+            setStatus('error');
+        }
+    };
 
     return (
         <div className={`aspect-[4/5] bg-[#1a1a1a] rounded-[24px] overflow-hidden relative group border-2 border-slate-800/50 hover:border-emerald-500/50 transition-all cursor-pointer ${status === 'loading' ? 'animate-pulse' : ''}`}>
@@ -27,9 +37,9 @@ const BrandImage: React.FC<{ src: string }> = ({ src }) => {
                 </div>
             ) : (
                 <img 
-                    src={src} 
+                    src={currentSrc} 
                     onLoad={() => setStatus('success')}
-                    onError={() => setStatus('error')}
+                    onError={handleError}
                     className={`w-full h-full object-cover transition-all duration-700 ${status === 'success' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`} 
                     alt="Extracted Asset"
                 />
@@ -46,16 +56,39 @@ const BrandImage: React.FC<{ src: string }> = ({ src }) => {
     );
 };
 
-// UI Modes
+// HELPER: NEURAL ALCHEMY COMPRESSION (Resizes large iPad images to save storage)
+const compressImage = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200; 
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.85)); 
+        };
+        img.src = dataUrl;
+    });
+};
+
 type ViewMode = 'INTRO' | 'IDLE' | 'SCANNING' | 'DASHBOARD';
 
 export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNavigate }) => {
-  // --- STATE ---
   const [view, setView] = useState<ViewMode>('INTRO');
   const [targetUrl, setTargetUrl] = useState(lead?.websiteUrl || '');
   const [progress, setProgress] = useState(0);
+  const [globalAssets, setGlobalAssets] = useState<AssetRecord[]>([]);
   
-  // Data State
   const [adHocLead, setAdHocLead] = useState<Partial<Lead>>({
     id: 'temp-adhoc',
     businessName: 'TARGET BRAND',
@@ -66,10 +99,25 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
   const activeEntity = lead || adHocLead as Lead;
   const activeIdentity = activeEntity.brandIdentity;
 
-  // Loading States
   const [scanStep, setScanStep] = useState(0);
   const extractionPromiseRef = useRef<Promise<BrandIdentity> | null>(null);
   const manualUploadRef = useRef<HTMLInputElement>(null);
+
+  // Unified Asset Feed: Deduplicate scraped images and manual uploads for this specific lead
+  const unifiedAssets = useMemo(() => {
+    const scraped = activeIdentity?.extractedImages || [];
+    const manual = globalAssets
+        .filter(a => a.type === 'IMAGE' && a.leadId === activeEntity.id)
+        .map(a => a.data);
+    
+    // Create unique set to prevent "Duplication" error
+    return Array.from(new Set([...manual, ...scraped]));
+  }, [activeIdentity?.extractedImages, globalAssets, activeEntity.id]);
+
+  useEffect(() => {
+    const unsub = subscribeToAssets(setGlobalAssets);
+    return () => unsub();
+  }, []);
 
   const SCAN_STEPS = [
     "Analyzing brand architecture...",
@@ -84,17 +132,17 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
     "Finalizing Alchemy Matrix..."
   ];
 
-  // If lead already has DNA, jump to dashboard if coming from intro
   useEffect(() => {
     if (activeIdentity && view === 'INTRO') {
       setView('DASHBOARD');
     }
   }, [activeIdentity]);
 
-  // --- ACTIONS ---
-
   const handleExtract = async () => {
-    if (!targetUrl.trim()) return;
+    if (!targetUrl.trim()) {
+        toast.info("Target URL required.");
+        return;
+    }
     
     let safeUrl = targetUrl.trim();
     if (!/^https?:\/\//i.test(safeUrl)) safeUrl = `https://${safeUrl}`;
@@ -104,7 +152,6 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
     setScanStep(0);
     setProgress(0);
 
-    // Simulation for cinematic effect
     const TOTAL_MS = 15000; 
     const stepIntervalMs = TOTAL_MS / SCAN_STEPS.length;
 
@@ -128,10 +175,10 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
 
       await new Promise(r => setTimeout(r, 600));
       
-      // SYNC EXTRACTED IMAGES TO GLOBAL ASSET LIBRARY
+      // SYNC EVERY UNIQUE EXTRACTED IMAGE TO GLOBAL ASSET LIBRARY
       if (brandData.extractedImages) {
         brandData.extractedImages.forEach((img, idx) => {
-          saveAsset('IMAGE', `EXTRACTED_${idx+1}: ${activeEntity.businessName}`, img, 'BRAND_DNA', activeEntity.id);
+          saveAsset('IMAGE', `DNA_EXTRACT_${idx+1}: ${activeEntity.businessName}`, img, 'BRAND_DNA', activeEntity.id);
         });
       }
 
@@ -164,44 +211,34 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newImageUrls: string[] = [];
     const fileArray = Array.from(files);
-    
-    toast.info(`Processing ${fileArray.length} assets...`);
+    toast.neural(`Alchemy Compression Active: Optimizing ${fileArray.length} assets...`);
 
     for (const file of fileArray) {
-        const dataUrl = await new Promise<string>((resolve) => {
+        const rawDataUrl = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onload = (ev) => resolve(ev.target?.result as string);
             reader.readAsDataURL(file);
         });
         
-        // COMMIT EACH TO ASSET LIBRARY
-        saveAsset('IMAGE', `MANUAL_UPLOAD: ${activeEntity.businessName}`, dataUrl, 'BRAND_DNA', activeEntity.id);
-        newImageUrls.push(dataUrl);
+        // COMPRESS BEFORE SAVING
+        const optimizedDataUrl = await compressImage(rawDataUrl);
+        
+        // COMMIT TO ASSET LIBRARY
+        saveAsset('IMAGE', `MANUAL_UPLOAD: ${activeEntity.businessName}`, optimizedDataUrl, 'BRAND_DNA', activeEntity.id);
     }
 
-    const currentImages = activeIdentity?.extractedImages || [];
-    const updatedIdentity: BrandIdentity = { 
-        ...(activeIdentity || { colors: [], fontPairing: '', archetype: '', visualTone: '', manifesto: '' }), 
-        extractedImages: [...newImageUrls, ...currentImages] 
-    };
-    
-    if (lead && onUpdateLead) {
-      onUpdateLead(lead.id, { brandIdentity: updatedIdentity });
-    } else {
-      setAdHocLead(prev => ({ ...prev, brandIdentity: updatedIdentity }));
-    }
-    
-    toast.success(`${newImageUrls.length} Assets Added Successfully.`);
+    toast.success(`${fileArray.length} Assets Optimized and Synced.`);
     if (manualUploadRef.current) manualUploadRef.current.value = '';
   };
 
   const handleLooksGood = () => {
-    if (onNavigate) onNavigate('OUTREACH', 'CAMPAIGN_ORCHESTRATOR');
+    if (onNavigate) {
+        onNavigate('OUTREACH', 'CAMPAIGN_ORCHESTRATOR');
+    } else {
+        toast.info("Nav Link Offline. Re-initializing...");
+    }
   };
-
-  // --- RENDERERS ---
 
   if (view === 'INTRO') {
     return (
@@ -288,7 +325,6 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
                        <span className="text-[11px] font-black text-black uppercase tracking-wide animate-in fade-in" key={scanStep}>{SCAN_STEPS[scanStep]}</span>
                     </div>
                     
-                    {/* Simulated Screenshot Frame */}
                     <div className="bg-[#0f0f0f] rounded-[32px] overflow-hidden border border-slate-800 shadow-2xl relative aspect-video flex items-center justify-center">
                         {targetUrl ? (
                             <img 
@@ -312,7 +348,6 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
                           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
                           <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest italic animate-pulse">PROCESSING_MATRICES</p>
                        </div>
-                       {/* Progress Bar */}
                        <div className="w-full h-1 bg-slate-900 rounded-full overflow-hidden">
                           <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
                        </div>
@@ -335,16 +370,14 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
           <div className="max-w-[1550px] mx-auto py-12 px-8 space-y-12 animate-in fade-in zoom-in-95 duration-1000 bg-[#0a0a0a] min-h-screen pb-40">
               <div className="text-center space-y-6">
                   <span className="text-4xl">🧬</span>
-                  <h1 className="text-4xl font-serif text-white italic tracking-tight leading-none uppercase tracking-tighter">Your Business DNA</h1>
+                  <h1 className="text-3xl font-serif text-white italic tracking-tight leading-none uppercase tracking-tighter">Your Business DNA</h1>
                   <p className="text-slate-500 text-sm max-w-lg mx-auto leading-relaxed uppercase tracking-widest opacity-60">Neural snapshot of your business profile and creative assets.</p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-                  {/* Left Column: Brand Cards */}
                   <div className="lg:col-span-6 space-y-6 flex flex-col">
                       <div className="bg-[#141414] rounded-[32px] p-12 flex flex-col justify-between border-2 border-slate-800/50 shadow-xl relative overflow-hidden flex-1 min-h-[400px]">
                           <div className="space-y-4">
-                              {/* Compact business name as requested */}
                               <h2 className="text-2xl font-serif text-white uppercase tracking-tighter leading-tight max-w-md">{activeEntity.businessName}</h2>
                               <a href={activeEntity.websiteUrl} target="_blank" className="text-[11px] text-emerald-400 font-mono hover:underline flex items-center gap-2 uppercase tracking-[0.1em]">
                                   🔗 {activeEntity.websiteUrl ? new URL(activeEntity.websiteUrl).hostname : 'N/A'}
@@ -389,12 +422,11 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
                       </div>
                   </div>
 
-                  {/* Right Column: Assets Grid */}
                   <div className="lg:col-span-6 bg-[#141414] border-2 border-slate-800/50 rounded-[56px] p-12 shadow-2xl flex flex-col min-h-[850px]">
                       <div className="flex justify-between items-center mb-12 border-b border-slate-800/50 pb-10">
                           <div className="space-y-1">
                             <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em]">DETECTED ASSETS</h3>
-                            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic">Visual proofs from official digital nodes.</p>
+                            <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest italic">Unique visual proofs and manual uploads.</p>
                           </div>
                           <div className="flex items-center gap-8">
                              <button 
@@ -412,17 +444,17 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
                                 multiple
                              />
                              <div className="text-right border-l border-slate-800 pl-8">
-                                <span className="text-3xl font-black text-emerald-500 italic tracking-tighter">{(activeIdentity.extractedImages?.length || 0)}</span>
+                                <span className="text-3xl font-black text-emerald-500 italic tracking-tighter">{unifiedAssets.length}</span>
                                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest block">ITEMS</span>
                              </div>
                           </div>
                       </div>
                       
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-8 flex-1 overflow-y-auto custom-scrollbar pr-4 content-start">
-                          {activeIdentity.extractedImages?.map((img, i) => (
-                              <BrandImage key={i} src={img} />
+                          {unifiedAssets.map((img, i) => (
+                              <BrandImage key={i} src={img} fallback={activeIdentity.screenshotUrl} />
                           ))}
-                          {(!activeIdentity.extractedImages || activeIdentity.extractedImages.length === 0) && (
+                          {unifiedAssets.length === 0 && (
                               <div className="col-span-full h-96 flex flex-col items-center justify-center opacity-10 space-y-8 grayscale scale-110">
                                   <span className="text-[120px]">📂</span>
                                   <p className="text-[12px] font-black uppercase tracking-[0.8em]">Extraction Buffer Empty</p>
@@ -432,7 +464,6 @@ export const BrandDNA: React.FC<BrandDNAProps> = ({ lead, onUpdateLead, onNaviga
                   </div>
               </div>
 
-              {/* Action Bar */}
               <div className="flex justify-between items-center pt-20 border-t border-slate-800/50">
                   <button 
                     onClick={() => setView('SCANNING')}

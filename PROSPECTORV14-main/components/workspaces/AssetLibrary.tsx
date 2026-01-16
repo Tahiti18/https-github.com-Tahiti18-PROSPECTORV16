@@ -9,9 +9,15 @@ export const AssetLibrary: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
+  const [storageUsed, setStorageUsed] = useState(0);
 
   useEffect(() => {
-    const unsub = subscribeToAssets((a) => setAssets(a));
+    const unsub = subscribeToAssets((a) => {
+        setAssets(a);
+        // Estimate storage size (simplified)
+        const size = JSON.stringify(a).length;
+        setStorageUsed(Math.round((size / (5 * 1024 * 1024)) * 100)); // 5MB limit
+    });
     return () => { try { unsub(); } catch { } };
   }, []);
 
@@ -49,7 +55,16 @@ export const AssetLibrary: React.FC = () => {
           <h1 className="text-4xl font-black italic text-white uppercase tracking-tighter">MEDIA <span className="text-emerald-500 not-italic">VAULT</span></h1>
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.4em] italic">Persistent Multi-Modal Asset Repository</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
+           <div className="flex flex-col items-end gap-1.5">
+              <div className="flex justify-between w-32 text-[8px] font-black text-slate-600 uppercase tracking-widest">
+                 <span>STORAGE</span>
+                 <span className={storageUsed > 80 ? 'text-rose-500' : 'text-emerald-500'}>{storageUsed}%</span>
+              </div>
+              <div className="w-32 h-1 bg-slate-900 rounded-full overflow-hidden">
+                 <div className={`h-full transition-all duration-1000 ${storageUsed > 80 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${storageUsed}%` }}></div>
+              </div>
+           </div>
            <div className="bg-[#0b1021] border border-slate-800 rounded-2xl px-4 flex items-center shadow-inner">
               <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest mr-3">VIEW:</span>
               <div className="flex gap-2 p-1">
@@ -99,7 +114,11 @@ export const AssetLibrary: React.FC = () => {
              {filtered.map(asset => (
                <div key={asset.id} className="bg-[#141414] border border-slate-800 rounded-[32px] overflow-hidden group hover:border-emerald-500/50 transition-all shadow-xl flex flex-col">
                   <div className="aspect-square bg-black relative overflow-hidden flex items-center justify-center">
-                     {asset.type === 'IMAGE' && <img src={asset.data} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={asset.title} />}
+                     {asset.type === 'IMAGE' && (
+                         <img src={asset.data} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={asset.title} onError={(e) => {
+                             (e.target as HTMLImageElement).src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA6DAwjgAAAABJRU5ErkJggg==';
+                         }} />
+                     )}
                      {asset.type === 'VIDEO' && <div className="text-4xl group-hover:scale-110 transition-transform">🎬</div>}
                      {asset.type === 'AUDIO' && <div className="text-4xl group-hover:scale-110 transition-transform">🎵</div>}
                      {asset.type === 'TEXT' && <div className="text-4xl group-hover:scale-110 transition-transform">📄</div>}
@@ -122,7 +141,10 @@ export const AssetLibrary: React.FC = () => {
                      <div className="mt-4 flex items-center justify-between">
                         <span className="text-[8px] font-black text-slate-600 uppercase font-mono">{new Date(asset.timestamp).toLocaleDateString()}</span>
                         <button 
-                          onClick={() => asset.type === 'TEXT' && navigator.clipboard.writeText(asset.data)}
+                          onClick={() => {
+                              if (asset.type === 'TEXT') navigator.clipboard.writeText(asset.data);
+                              toast.info("Link Ready.");
+                          }}
                           className="text-emerald-500 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           {asset.type === 'TEXT' ? 'COPY' : 'VIEW'} →
